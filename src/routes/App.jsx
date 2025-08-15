@@ -12,13 +12,15 @@ import Location from '../components/Location'
 import Contact from '../components/Contact'
 import Footer from '../components/Footer'
 import StickyBookButton from '../components/StickyBookButton'
-
+import Navbar from '../components/Navbar'
+import "../index.css";
 export default function App() {
   return (
     <>
       <ScrollProgress />
       <StickyBookButton />
       <main>
+        <Navbar />
         <Hero />
         <SectionDivider />
         <About />
