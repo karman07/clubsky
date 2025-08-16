@@ -8,7 +8,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { RefreshCcw } from 'lucide-react'
 
 export default function Bookings() {
-  const { bookings, loading, error, refresh, findByPhoneNumber } = useBookings()
+  const { bookings, loading, error, refresh } = useBookings()
   const [query, setQuery] = useState('')
   const [date, setDate] = useState('')
   const [courtId, setCourtId] = useState('all')
@@ -55,15 +55,6 @@ export default function Bookings() {
     setQuery(''); setDate(''); setCourtId('all'); setMinPaid(''); setMaxPaid(''); setPage(1)
   }
 
-  async function searchPhoneQuick() {
-    if (!query.trim()) return
-    try {
-      const data = await findByPhoneNumber(query.trim())
-      alert(`Quick phone lookup: found ${data.length} bookings for ${query.trim()}`)
-    } catch (e: any) {
-      alert(e?.message || 'Lookup failed')
-    }
-  }
 
   return (
     <div className="container pt-8 space-y-6">
@@ -119,9 +110,7 @@ export default function Bookings() {
           </thead>
           <tbody>
             {pageItems.map(b => {
-              // Extract court display name and ID
-              const courtName = typeof b.courtId === 'object' ? b.courtId.name : b.courtId
-              const courtDisplayId = typeof b.courtId === 'object' ? b.courtId._id : b.courtId
+  
               
               return (
                 <tr key={b._id} className="border-t">

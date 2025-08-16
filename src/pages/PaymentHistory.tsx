@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, CreditCard, Loader2 } from "lucide-react";
+import { Calendar, Loader2 } from "lucide-react";
 import { BASE_URL } from "../constants/constants"; // <-- update your API base url here
 
 type Payment = {
