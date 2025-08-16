@@ -16,7 +16,7 @@ const router = createBrowserRouter([
   { path: "/terms", element: <Terms /> },
   { path: "/privacy-policy", element: <Privacy /> },
   { path: "/refund-policy", element: <Refund /> },
-  { path: "/book", element: <BeautifulCourtsUI /> },
+  { path: "/book", element: <Booking />  },
   { path: "/booking/:id", element: <Booking /> },
   { path:"/search", element:<BookingLookupPage/>}
 ]);
