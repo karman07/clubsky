@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Mic, MicOff, MapPin, Grid, List, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useCourtContext } from '../context/CourtContext'; 
 
 const BeautifulCourtsUI = () => {
   const { courts, loading } = useCourtContext();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
@@ -73,6 +75,17 @@ const BeautifulCourtsUI = () => {
       recognitionRef.current.stop();
       setIsListening(false);
     }
+  };
+
+  // Handle court card click - navigate to booking with court ID
+  const handleCourtClick = (courtId) => {
+    navigate(`/booking/${courtId}`);
+  };
+
+  // Handle book now button click
+  const handleBookNowClick = (e, courtId) => {
+    e.stopPropagation(); // Prevent card click event
+    navigate(`/booking/${courtId}`);
   };
 
   if (loading) {
@@ -200,8 +213,9 @@ const BeautifulCourtsUI = () => {
           <div className={`grid gap-8 ${viewMode === 'grid' ? 'md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
             {filteredCourts.map((court) => (
               <div
-                key={court.id}
-                className="group relative bg-white rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-500 hover:scale-105 border border-gray-200"
+                key={court._id}
+                onClick={() => handleCourtClick(court._id)}
+                className="group relative bg-white rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-500 hover:scale-105 border border-gray-200 cursor-pointer"
               >
                 {/* Image */}
                 <div className="relative h-56 overflow-hidden">
@@ -261,7 +275,11 @@ const BeautifulCourtsUI = () => {
                       ₹{court.price}
                       <span className="text-lg text-gray-500 font-normal">/hour</span>
                     </div>
-                    <button className="text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl" style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}>
+                    <button 
+                      onClick={(e) => handleBookNowClick(e, court._id)}
+                      className="text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl" 
+                      style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
+                    >
                       Book Now
                     </button>
                   </div>

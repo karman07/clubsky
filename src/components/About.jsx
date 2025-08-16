@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import Reveal from './Reveal'
 import { asset } from '../utils/asset'
+import { Link } from 'react-router-dom'
 
 export default function About() {
   const titleRef = useRef(null)

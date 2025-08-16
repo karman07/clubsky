@@ -11,6 +11,7 @@ import {
   X,
   ArrowLeft
 } from 'lucide-react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useCourtContext } from '../context/CourtContext';
 import { useBookingContext } from '../context/BookingContext';
 import BookingDetailsPage from './BookingDetailsPage';
@@ -18,7 +19,13 @@ import BookingDetailsPage from './BookingDetailsPage';
 const ImprovedBookingPage = ({ courtId: propCourtId }) => {
   const { courts, loading: courtsLoading, fetchCourtById } = useCourtContext();
   const { getUnavailableSlots, getFullyBookedDays } = useBookingContext();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { id } = useParams();
 
+  const courtIdFromState = location.state?.courtId;
+  const finalCourtId = courtIdFromState || propCourtId || id;
+  
   // State management
   const [selectedCourt, setSelectedCourt] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -78,17 +85,32 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
     return dates;
   }, [fullyBookedDays]);
 
-  // Initialize selected court
+  // Initialize selected court based on finalCourtId from params
   useEffect(() => {
-    if (courts.length > 0 && !selectedCourt) {
-      if (propCourtId) {
-        const court = courts.find(c => c.id === propCourtId);
-        setSelectedCourt(court || courts[0]);
+    if (courts.length > 0) {
+      if (finalCourtId) {
+        // Find court by exact ID match - prioritize _id, then fallback to id
+        const court = courts.find(c => {
+          const courtId = c._id || c.id;
+          const targetId = finalCourtId;
+          return courtId === targetId || courtId?.toString() === targetId?.toString();
+        });
+        
+        if (court) {
+          console.log('Setting selected court from params:', court);
+          setSelectedCourt(court);
+        } else {
+          console.log('Court not found with ID:', finalCourtId, 'Available courts:', courts);
+          // If no court found with the ID, don't set any court as selected
+          setSelectedCourt(null);
+        }
       } else {
+        // Only set first court as default if no specific court ID is provided
+        console.log('No court ID provided, setting first court as default');
         setSelectedCourt(courts[0]);
       }
     }
-  }, [courts, propCourtId, selectedCourt]);
+  }, [courts, finalCourtId]);
 
   // Function to expand time slot ranges into individual hours
   const expandTimeSlots = (timeSlotRanges) => {
@@ -113,11 +135,12 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
     if (selectedCourt && selectedDate) {
       const fetchData = async () => {
         try {
-          const unavailableRanges = await getUnavailableSlots(selectedCourt._id, selectedDate);
+          const courtId = selectedCourt._id || selectedCourt.id;
+          const unavailableRanges = await getUnavailableSlots(courtId, selectedDate);
           const expandedUnavailable = expandTimeSlots(unavailableRanges);
           setUnavailableSlots(expandedUnavailable);
           
-          const fullyBooked = await getFullyBookedDays(selectedCourt.id);
+          const fullyBooked = await getFullyBookedDays(courtId);
           setFullyBookedDays(new Set(fullyBooked || []));
         } catch (error) {
           console.error('Error fetching booking data:', error);
@@ -145,18 +168,19 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
   };
 
   const handleCourtChange = (court) => {
+    // Only allow selection of one court at a time
     setSelectedCourt(court);
-    setSelectedSlots(new Set());
+    setSelectedSlots(new Set()); // Clear selected slots when court changes
   };
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
-    setSelectedSlots(new Set());
+    setSelectedSlots(new Set()); // Clear selected slots when date changes
   };
 
   const scrollDateSlider = (direction) => {
     if (dateSliderRef.current) {
-      const scrollAmount = isMobile ? 150 : 200;
+      const scrollAmount = isMobile ? 120 : 200;
       dateSliderRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
@@ -174,6 +198,21 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
 
   const handleBackToSlots = () => {
     setShowBookingDetails(false);
+  };
+
+  const handleBackToCourts = () => {
+    navigate('/book');
+  };
+
+  // Helper function to check if a court is selected
+  const isCourtSelected = (court) => {
+    if (!selectedCourt) return false;
+    
+    const selectedCourtId = selectedCourt._id || selectedCourt.id;
+    const currentCourtId = court._id || court.id;
+    
+    return selectedCourtId === currentCourtId || 
+           selectedCourtId?.toString() === currentCourtId?.toString();
   };
 
   if (courtsLoading) {
@@ -195,6 +234,7 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
         selectedSlots={selectedSlots}
         pricePerSlot={pricePerSlot}
         totalPrice={totalPrice}
+        timeSlots={timeSlots}
         onBack={handleBackToSlots}
       />
     );
@@ -204,106 +244,112 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button 
+              onClick={handleBackToCourts}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
             </button>
-            <div>
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Book a Court</h1>
-              <p className="text-sm sm:text-base text-gray-700 hidden sm:block">Select your preferred time and court</p>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Book a Court</h1>
+              <p className="text-sm text-gray-700 hidden sm:block">Select your preferred time and court</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Mobile Layout */}
         {isMobile ? (
-          <div className="space-y-6">
+          <div className="space-y-4 pb-24">
             {/* Court Selection - Mobile */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: '#24392B' }}>Select Court</h2>
-              <div className="space-y-3">
-                {courts.map((court) => (
-                  <div
-                    key={court.id}
-                    onClick={() => handleCourtChange(court)}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-300 ${
-                      selectedCourt?.id === court.id 
-                        ? 'border-current shadow-sm' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    style={{ 
-                      borderColor: selectedCourt?.id === court.id ? '#24392B' : undefined,
-                      backgroundColor: selectedCourt?.id === court.id ? '#f8fffe' : undefined
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      {court.imageUrl ? (
-                        <img
-                          src={court.imageUrl}
-                          alt={court.name}
-                          className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div 
-                          className="w-16 h-16 rounded-lg flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
-                          style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
-                        >
-                          {court.name.charAt(0)}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <h3 className="font-semibold text-base mb-1 text-gray-900 truncate">
-                            {court.name}
-                          </h3>
-                          {selectedCourt?.id === court.id && (
-                            <div className="text-white p-1 rounded-full ml-2 flex-shrink-0" style={{ backgroundColor: '#24392B' }}>
-                              <Check className="w-3 h-3" />
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+              <h2 className="text-lg font-semibold mb-3" style={{ color: '#24392B' }}>Select Court</h2>
+              <div className="space-y-2">
+                {courts.map((court) => {
+                  const isSelected = isCourtSelected(court);
+                  
+                  return (
+                    <div
+                      key={court._id || court.id}
+                      onClick={() => handleCourtChange(court)}
+                      className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-300 ${
+                        isSelected
+                          ? 'border-current shadow-sm' 
+                          : 'border-gray-200 hover:border-gray-300 active:bg-gray-50'
+                      }`}
+                      style={{ 
+                        borderColor: isSelected ? '#24392B' : undefined,
+                        backgroundColor: isSelected ? '#f8fffe' : undefined
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        {court.imageUrl ? (
+                          <img
+                            src={court.imageUrl}
+                            alt={court.name}
+                            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div 
+                            className="w-12 h-12 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                            style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
+                          >
+                            {court.name.charAt(0)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-semibold text-base text-gray-900 truncate">
+                                {court.name}
+                              </h3>
+                              <div className="flex items-center gap-1 text-xs text-gray-600 mt-0.5">
+                                <MapPin className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate">{court.location}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="font-semibold text-sm text-gray-900">
+                                ₹{court.price}/hr
+                              </span>
+                              {isSelected && (
+                                <div className="text-white p-1 rounded-full" style={{ backgroundColor: '#24392B' }}>
+                                  <Check className="w-3 h-3" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {court.features && court.features.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {court.features.slice(0, 2).map((feature, index) => (
+                                <span
+                                  key={index}
+                                  className="px-2 py-0.5 bg-gray-100 text-gray-800 text-xs rounded-full"
+                                >
+                                  {feature}
+                                </span>
+                              ))}
+                              {court.features.length > 2 && (
+                                <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-xs rounded-full">
+                                  +{court.features.length - 2}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
-                        <p className="text-gray-700 text-xs mb-2 line-clamp-1">
-                          {court.description}
-                        </p>
-                        <div className="flex items-center justify-between text-xs text-gray-600">
-                          <div className="flex items-center gap-1 truncate">
-                            <MapPin className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{court.location}</span>
-                          </div>
-                          <span className="font-semibold text-gray-900 ml-2">
-                            ₹{court.price}/hr
-                          </span>
-                        </div>
-                        {court.features && court.features.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {court.features.slice(0, 2).map((feature, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
-                              >
-                                {feature}
-                              </span>
-                            ))}
-                            {court.features.length > 2 && (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
-                                +{court.features.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Date Selection - Mobile */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: '#24392B' }}>Select Date</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+              <h2 className="text-lg font-semibold mb-3" style={{ color: '#24392B' }}>Select Date</h2>
               <div className="relative">
                 <button
                   onClick={() => scrollDateSlider('left')}
@@ -320,10 +366,10 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                     <button
                       key={date.value}
                       onClick={() => handleDateChange(date.value)}
-                      className={`flex-shrink-0 p-3 rounded-lg border-2 text-center transition-all duration-300 min-w-[80px] ${
+                      className={`flex-shrink-0 p-2.5 rounded-lg border-2 text-center transition-all duration-300 min-w-[70px] ${
                         selectedDate === date.value
                           ? 'text-white shadow-sm'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-800'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-800 active:bg-gray-50'
                       }`}
                       style={{
                         background: selectedDate === date.value 
@@ -332,8 +378,8 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                         borderColor: selectedDate === date.value ? '#24392B' : undefined
                       }}
                     >
-                      <div className="text-xs font-medium">{date.display}</div>
-                      <div className={`text-xs mt-1 ${selectedDate === date.value ? 'text-white opacity-90' : 'text-gray-600'}`}>
+                      <div className="text-xs font-medium leading-tight">{date.display}</div>
+                      <div className={`text-xs mt-0.5 ${selectedDate === date.value ? 'text-white opacity-90' : 'text-gray-600'}`}>
                         {date.fullDate.getFullYear()}
                       </div>
                     </button>
@@ -349,8 +395,8 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
             </div>
 
             {/* Time Slots - Mobile */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: '#24392B' }}>Available Time Slots</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+              <h2 className="text-lg font-semibold mb-3" style={{ color: '#24392B' }}>Available Time Slots</h2>
               <div className="grid grid-cols-2 gap-2">
                 {timeSlots.map((slot) => {
                   const isUnavailable = unavailableSlots.has(slot.value);
@@ -361,12 +407,12 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                       key={slot.value}
                       onClick={() => handleSlotToggle(slot.value)}
                       disabled={isUnavailable}
-                      className={`p-3 rounded-lg border-2 text-center transition-all duration-300 ${
+                      className={`p-3 rounded-lg border-2 text-center transition-all duration-300 active:scale-95 ${
                         isUnavailable
                           ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
                           : isSelected
                           ? 'text-white shadow-sm'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-800'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-800 active:bg-gray-50'
                       }`}
                       style={{
                         background: isSelected && !isUnavailable 
@@ -395,29 +441,28 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
             </div>
 
             {/* Mobile Booking Summary - Fixed at bottom */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-50">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="font-semibold text-gray-900">
-                    {selectedSlots.size} slot{selectedSlots.size !== 1 ? 's' : ''} selected
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    Total: ₹{totalPrice}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+              {selectedSlots.size > 0 && (
+                <div className="px-4 py-2 bg-gray-50 border-b">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700">
+                      {selectedSlots.size} slot{selectedSlots.size !== 1 ? 's' : ''} • {selectedCourt?.name}
+                    </span>
+                    <span className="font-semibold text-gray-900">₹{totalPrice}</span>
                   </div>
                 </div>
+              )}
+              <div className="p-4">
                 <button
                   onClick={handleContinueToDetails}
                   disabled={selectedSlots.size === 0}
-                  className="px-6 py-2 text-white rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-base"
                   style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
                 >
-                  Continue
+                  {selectedSlots.size === 0 ? 'Select Time Slots' : `Continue (₹${totalPrice})`}
                 </button>
               </div>
             </div>
-
-            {/* Spacer for fixed bottom bar */}
-            <div className="h-20"></div>
           </div>
         ) : (
           /* Desktop Layout */
@@ -428,79 +473,83 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                 <h2 className="text-xl font-semibold mb-6" style={{ color: '#24392B' }}>Select Court</h2>
                 <div className="grid gap-4">
-                  {courts.map((court) => (
-                    <div
-                      key={court.id}
-                      onClick={() => handleCourtChange(court)}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-md ${
-                        selectedCourt?.id === court.id 
-                          ? 'border-current shadow-md' 
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      style={{ 
-                        borderColor: selectedCourt?.id === court.id ? '#24392B' : undefined,
-                        backgroundColor: selectedCourt?.id === court.id ? '#f8fffe' : undefined
-                      }}
-                    >
-                      <div className="flex items-start gap-4">
-                        {court.imageUrl ? (
-                          <img
-                            src={court.imageUrl}
-                            alt={court.name}
-                            className="w-24 h-24 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div 
-                            className="w-24 h-24 rounded-lg flex items-center justify-center text-white text-2xl font-bold"
-                            style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
-                          >
-                            {court.name.charAt(0)}
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg mb-2 text-gray-900">
-                            {court.name}
-                          </h3>
-                          <p className="text-gray-700 text-sm mb-3 line-clamp-2">
-                            {court.description}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {court.location}
+                  {courts.map((court) => {
+                    const isSelected = isCourtSelected(court);
+                    
+                    return (
+                      <div
+                        key={court._id || court.id}
+                        onClick={() => handleCourtChange(court)}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-md ${
+                          isSelected
+                            ? 'border-current shadow-md' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        style={{ 
+                          borderColor: isSelected ? '#24392B' : undefined,
+                          backgroundColor: isSelected ? '#f8fffe' : undefined
+                        }}
+                      >
+                        <div className="flex items-start gap-4">
+                          {court.imageUrl ? (
+                            <img
+                              src={court.imageUrl}
+                              alt={court.name}
+                              className="w-24 h-24 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div 
+                              className="w-24 h-24 rounded-lg flex items-center justify-center text-white text-2xl font-bold"
+                              style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
+                            >
+                              {court.name.charAt(0)}
                             </div>
-                            <div className="flex items-center gap-1">
-                              <span className="font-semibold text-gray-900">
-                                ₹{court.price}/hour
-                              </span>
+                          )}
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-2 text-gray-900">
+                              {court.name}
+                            </h3>
+                            <p className="text-gray-700 text-sm mb-3 line-clamp-2">
+                              {court.description}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                {court.location}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-semibold text-gray-900">
+                                  ₹{court.price}/hour
+                                </span>
+                              </div>
                             </div>
+                            {court.features && court.features.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {court.features.slice(0, 3).map((feature, index) => (
+                                  <span
+                                    key={index}
+                                    className="px-3 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
+                                  >
+                                    {feature}
+                                  </span>
+                                ))}
+                                {court.features.length > 3 && (
+                                  <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                                    +{court.features.length - 3} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          {court.features && court.features.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {court.features.slice(0, 3).map((feature, index) => (
-                                <span
-                                  key={index}
-                                  className="px-3 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
-                                >
-                                  {feature}
-                                </span>
-                              ))}
-                              {court.features.length > 3 && (
-                                <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
-                                  +{court.features.length - 3} more
-                                </span>
-                              )}
+                          {isSelected && (
+                            <div className="text-white p-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#24392B' }}>
+                              <Check className="w-4 h-4" />
                             </div>
                           )}
                         </div>
-                        {selectedCourt?.id === court.id && (
-                          <div className="text-white p-2 rounded-full" style={{ backgroundColor: '#24392B' }}>
-                            <Check className="w-4 h-4" />
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -608,6 +657,7 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                     <h4 className="font-medium text-gray-900">{selectedCourt.name}</h4>
                     <p className="text-sm text-gray-700">{selectedCourt.location}</p>
                     <p className="text-sm text-gray-700">{selectedDate}</p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">₹{selectedCourt.price}/hour</p>
                   </div>
                 )}
 

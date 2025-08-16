@@ -10,6 +10,7 @@ export default function Navbar() {
     { name: "Terms", path: "/terms" },
     { name: "Privacy Policy", path: "/privacy-policy" },
     { name: "Refund Policy", path: "/refund-policy" },
+    { name: "Search Bookings", path:'/search'}
   ];
 
   return (
