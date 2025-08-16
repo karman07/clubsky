@@ -1,61 +1,49 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Booking, BookingDocument } from './schemas/booking.schema';
+import { Injectable } from '@nestjs/common';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 @Injectable()
 export class BookingService {
-  constructor(@InjectModel(Booking.name) private bookingModel: Model<BookingDocument>) {}
+  private bookings: CreateBookingDto[] = [];
 
-  async create(dto: CreateBookingDto & { timeSlots: number[][] }): Promise<Booking> {
-    const existing = await this.bookingModel.find({
-      courtId: dto.courtId,
-      date: dto.date,
-    });
+  constructor(private readonly whatsappService: WhatsappService) {}
 
-    // Check for overlap
-    for (const b of existing) {
-      for (const [start, end] of b.timeSlots) {
-        for (const [reqStart, reqEnd] of dto.timeSlots) {
-          if (!(reqEnd <= start || reqStart >= end)) {
-            throw new BadRequestException(`Time range ${reqStart}-${reqEnd} overlaps with existing booking.`);
-          }
-        }
-      }
-    }
+  async create(dto: CreateBookingDto) {
+    // Store booking in-memory (replace with DB in production)
+    this.bookings.push(dto);
 
-    const booking = new this.bookingModel(dto);
-    return booking.save();
+    // Format time slots
+    const timeSlots = dto.timeSlots
+      .map(slot => `${slot[0]}:00 - ${slot[1]}:00`)
+      .join(', ');
+
+    // Build confirmation message
+    const message = `✅ Booking Confirmed!\n\nCourt: ${dto.courtId}\nName: ${dto.name}\nDate: ${dto.date}\nTime Slots: ${timeSlots}\nPaid: ₹${dto.paidAmount}`;
+
+    // Send via WhatsApp
+    await this.whatsappService.sendMessage(dto.phoneNumber, message);
+
+    return { success: true, booking: dto };
   }
 
-  async findAll(): Promise<Booking[]> {
-    return this.bookingModel.find().populate('courtId').exec();
+  async findAll() {
+    return this.bookings;
   }
 
-  async findByCourtAndDate(courtId: string, date: string): Promise<Booking[]> {
-    return this.bookingModel.find({ courtId, date }).exec();
+  async findByPhoneNumber(phoneNumber: string) {
+    return this.bookings.filter(b => b.phoneNumber === phoneNumber);
   }
 
-  async getFullyBookedDays(courtId: string): Promise<string[]> {
-    const bookings = await this.bookingModel.find({ courtId }).exec();
-    const dayMap: Record<string, number> = {};
-
-    bookings.forEach(b => {
-      if (!dayMap[b.date]) dayMap[b.date] = 0;
-      dayMap[b.date] += b.timeSlots.length;
-    });
-
-    // Example logic: fully booked if total booked hours >= 16
-    return Object.keys(dayMap).filter(date => dayMap[date] >= 16);
+  async getUnavailableSlots(courtId: string, date: string) {
+    return this.bookings
+      .filter(b => b.courtId === courtId && b.date === date)
+      .map(b => b.timeSlots)
+      .flat();
   }
 
-  async getUnavailableSlots(courtId: string, date: string): Promise<number[][]> {
-    const bookings = await this.findByCourtAndDate(courtId, date);
-    return bookings.flatMap(b => b.timeSlots);
-  }
-
-    async findByPhoneNumber(phoneNumber: string): Promise<Booking[]> {
-    return this.bookingModel.find({ phoneNumber }).populate('courtId').exec();
+  async getFullyBookedDays(courtId: string) {
+    return this.bookings
+      .filter(b => b.courtId === courtId)
+      .map(b => b.date);
   }
 }
