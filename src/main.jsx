@@ -10,6 +10,8 @@ import { CourtProvider } from "./context/CourtContext";
 import { BookingProvider } from "./context/BookingContext";
 import BeautifulCourtsUI from "./routes/Courts";
 import BookingLookupPage from "./routes/SearchBooking";
+import MembershipPlans from "./routes/MembershipPlans";
+import MembershipRegistrationSystem from "./routes/MembershipDetails";
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
@@ -18,7 +20,9 @@ const router = createBrowserRouter([
   { path: "/refund-policy", element: <Refund /> },
   { path: "/book", element: <Booking />  },
   { path: "/booking/:id", element: <Booking /> },
-  { path:"/search", element:<BookingLookupPage/>}
+  { path:"/search", element:<BookingLookupPage/>},
+  {path:"/membership", element:<MembershipPlans/>},
+  {path:"/membershipDetails/:planId", element:<MembershipRegistrationSystem/>}
 ]);
 
 createRoot(document.getElementById("root")).render(

@@ -40,7 +40,7 @@ export default function Hero() {
         <p className="mt-3 text-cream-200/90 font-medium uppercase tracking-[0.18em]">The Luxury Pickle Zone</p>
         <div className="mt-8 flex items-center justify-center gap-4">
           <Link to="/book" className="btn-primary">Book Slot</Link>
-          <a href="#about" className="btn-ghost">Explore</a>
+          <Link to="/membership" className="btn-ghost">Explore Membership</Link>
         </div>
       </div>
     </section>
