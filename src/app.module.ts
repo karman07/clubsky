@@ -7,6 +7,8 @@ import { CourtModule } from './court/court.module';
 import { BookingModule } from './booking/booking.module';
 import { RazorpayModule } from 'nestjs-razorpay';
 import { PaymentsModule } from './payments/payments.module';
+import { PlanModule } from './plan/plan.module';
+import { MembershipModule } from './membership/membership.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { PaymentsModule } from './payments/payments.module';
     PaymentsModule,
     CourtModule,
     BookingModule,
+    PlanModule,
+    MembershipModule
   ],
   controllers: [AppController],
   providers: [AppService],
