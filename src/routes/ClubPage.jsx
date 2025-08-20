@@ -44,7 +44,7 @@ export default function ClubPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
       {/* Hero Section with Enhanced Carousel */}
       <div className="relative">
         <div className="relative w-full h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden">
