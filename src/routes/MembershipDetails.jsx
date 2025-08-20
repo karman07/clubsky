@@ -412,7 +412,6 @@ Thank you for choosing our fitness membership!
                               <span className="font-medium">{plan.hours} hours</span>
                             </div>
                             <div className="flex items-center text-green-600">
-                              <DollarSign className="w-4 h-4 mr-1" />
                               <span className="font-bold text-lg">
                                 {formatPrice(plan.price)}
                               </span>
