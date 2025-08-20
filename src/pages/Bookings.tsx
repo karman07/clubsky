@@ -58,16 +58,16 @@ export default function Bookings(): JSX.Element {
 
   const hasActiveFilters: boolean = !!(query || date || courtId !== 'all' || minPaid || maxPaid)
 
-  const getActivityColor = (activity: string): string => {
-    const colors: Record<string, string> = {
-      'Badminton': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      'Tennis': 'bg-blue-50 text-blue-700 border-blue-200',
-      'Basketball': 'bg-orange-50 text-orange-700 border-orange-200',
-      'Football': 'bg-green-50 text-green-700 border-green-200',
-      'Volleyball': 'bg-purple-50 text-purple-700 border-purple-200',
-    }
-    return colors[activity] || 'bg-gray-50 text-gray-700 border-gray-200'
-  }
+  // const getActivityColor = (activity: string): string => {
+  //   const colors: Record<string, string> = {
+  //     'Badminton': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  //     'Tennis': 'bg-blue-50 text-blue-700 border-blue-200',
+  //     'Basketball': 'bg-orange-50 text-orange-700 border-orange-200',
+  //     'Football': 'bg-green-50 text-green-700 border-green-200',
+  //     'Volleyball': 'bg-purple-50 text-purple-700 border-purple-200',
+  //   }
+  //   return colors[activity] || 'bg-gray-50 text-gray-700 border-gray-200'
+  // }
 
   const formatTimeSlot = (slot: number[]): string => {
     if (slot.length !== 2) return 'Invalid slot'
@@ -214,10 +214,6 @@ export default function Bookings(): JSX.Element {
                     Customer
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-                    <MapPin className="inline h-4 w-4 mr-2" />
-                    Court & Activity
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
                     <Calendar className="inline h-4 w-4 mr-2" />
                     Date
                   </th>
@@ -233,8 +229,8 @@ export default function Bookings(): JSX.Element {
               </thead>
               <tbody>
                 {pageItems.map((booking: Booking, index: number) => {
-                  const courtName: string = typeof booking.courtId === 'object' ? booking.courtId.name : 'Unknown Court'
-                  const activity: string = typeof booking.courtId === 'object' ? booking.courtId.activity : ''
+                  // const courtName: string = typeof booking.courtId === 'object' ? booking.courtId.name : 'Unknown Court'
+                  // const activity: string = typeof booking.courtId === 'object' ? booking.courtId.activity : ''
                   
                   return (
                     <tr 
@@ -252,16 +248,7 @@ export default function Bookings(): JSX.Element {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-2">
-                          <div className="font-medium text-slate-800">{courtName}</div>
-                          {activity && (
-                            <Badge className={`text-xs ${getActivityColor(activity)}`}>
-                              {activity}
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
+            
                       <td className="px-6 py-4">
                         <div className="text-slate-700 font-medium">
                           {new Date(booking.date).toLocaleDateString('en-US', {
