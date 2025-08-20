@@ -54,6 +54,7 @@ export default function Navbar() {
         />
       )}
 
+
       {/* Sidebar */}
       <div className={`fixed left-0 top-0 z-50 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -144,6 +145,30 @@ export default function Navbar() {
               onClick={closeSidebar}
             >
               Courts
+            </NavLink>
+
+            <NavLink 
+              to="/plans" 
+              className={({ isActive }) => 
+                `flex items-center px-4 py-3 text-sm rounded-lg transition-colors hover:bg-gray-100 ${
+                  isActive ? 'bg-gray-100 font-semibold text-blue-600' : 'text-gray-700'
+                }`
+              }
+              onClick={closeSidebar}
+            >
+              Plans
+            </NavLink>
+
+                        <NavLink 
+              to="/memberships" 
+              className={({ isActive }) => 
+                `flex items-center px-4 py-3 text-sm rounded-lg transition-colors hover:bg-gray-100 ${
+                  isActive ? 'bg-gray-100 font-semibold text-blue-600' : 'text-gray-700'
+                }`
+              }
+              onClick={closeSidebar}
+            >
+              Memberships
             </NavLink>
           </nav>
         )}

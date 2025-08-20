@@ -87,7 +87,7 @@ export default function Bookings(): JSX.Element {
         {/* Header */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold">
               Bookings Dashboard
             </h1>
             <p className="text-lg text-slate-600">
@@ -96,13 +96,13 @@ export default function Bookings(): JSX.Element {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-2xl font-bold text-indigo-600">{total}</div>
+              <div className="text-2xl font-bold text-blue-500">{total}</div>
               <div className="text-sm text-slate-500">Total Bookings</div>
             </div>
             <Button 
               onClick={() => refresh()} 
               disabled={loading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              className="bg-blue-500 hover:bg-blue-500 text-white shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <RefreshCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               {loading ? 'Refreshing...' : 'Refresh'}
@@ -113,10 +113,10 @@ export default function Bookings(): JSX.Element {
         {/* Filters */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xl">
           <div className="flex items-center gap-2 mb-6">
-            <Filter className="h-5 w-5 text-indigo-600" />
+            <Filter className="h-5 w-5 text-blue-500" />
             <h2 className="text-lg font-semibold text-slate-800">Filters</h2>
             {hasActiveFilters && (
-              <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">
+              <Badge className="bg-indigo-100 text-blue-500 border-indigo-200">
                 {[query, date, courtId !== 'all', minPaid, maxPaid].filter(Boolean).length} active
               </Badge>
             )}
@@ -277,7 +277,7 @@ export default function Bookings(): JSX.Element {
                           {booking.timeSlots.map((slot: number[], i: number) => (
                             <Badge 
                               key={i} 
-                              className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs font-medium"
+                              className="bg-indigo-50 text-blue-500 border-indigo-200 text-xs font-medium"
                             >
                               {formatTimeSlot(slot)}
                             </Badge>
@@ -310,7 +310,7 @@ export default function Bookings(): JSX.Element {
           
           {loading && (
             <div className="px-6 py-12 text-center">
-              <div className="inline-flex items-center text-indigo-600">
+              <div className="inline-flex items-center text-blue-500">
                 <RefreshCcw className="animate-spin h-5 w-5 mr-2" />
                 Loading bookings...
               </div>

@@ -9,6 +9,8 @@ import FullyBookedDays from '@/pages/FullyBookedDays'
 import { buttonVariants } from '@/components/ui/button'
 import PaymentHistory from './pages/PaymentHistory'
 import CourtsAdminPage from './pages/CourtPage'
+import MembershipsPage from './pages/MembershipPage'
+import PlanManagementSystem from './pages/Plans'
 
 export default function App() {
   return (
@@ -34,6 +36,10 @@ export default function App() {
             <ProtectedRoute><PaymentHistory /></ProtectedRoute>
           } />
           <Route path='/courts' element={<ProtectedRoute><CourtsAdminPage/></ProtectedRoute>}/>
+
+          <Route path='/memberships' element={<ProtectedRoute><MembershipsPage/></ProtectedRoute>}/>
+
+          <Route path='/plans' element={<ProtectedRoute><PlanManagementSystem/></ProtectedRoute>}/>
           <Route path="*" element={
             <main className="container py-16 space-y-6">
               <h1 className="text-3xl font-bold">404 — Not Found</h1>
