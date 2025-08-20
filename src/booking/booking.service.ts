@@ -1,49 +1,85 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Booking, BookingDocument } from './schemas/booking.schema';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 @Injectable()
 export class BookingService {
-  private bookings: CreateBookingDto[] = [];
+  constructor(
+    @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
+    private readonly whatsappService: WhatsappService,
+  ) {}
 
-  constructor(private readonly whatsappService: WhatsappService) {}
+  async create(dto: CreateBookingDto & { timeSlots: number[][] }) {
+    // 1. Fetch all existing bookings for the same court & date
+    const existing = await this.bookingModel.find({
+      courtId: dto.courtId,
+      date: dto.date,
+    });
 
-  async create(dto: CreateBookingDto) {
-    // Store booking in-memory (replace with DB in production)
-    this.bookings.push(dto);
+    // 2. Check overlap (e.g. requested slot overlaps with already booked slot)
+    for (const b of existing) {
+      for (const [start, end] of b.timeSlots) {
+        for (const [reqStart, reqEnd] of dto.timeSlots) {
+          if (!(reqEnd <= start || reqStart >= end)) {
+            throw new BadRequestException(
+              `Time range ${reqStart}:00 - ${reqEnd}:00 overlaps with existing booking.`,
+            );
+          }
+        }
+      }
+    }
 
-    // Format time slots
+    // 3. Save booking to DB
+    const booking = new this.bookingModel(dto);
+    await booking.save();
+
+    // 4. Build WhatsApp confirmation message
     const timeSlots = dto.timeSlots
-      .map(slot => `${slot[0]}:00 - ${slot[1]}:00`)
+      .map(([s, e]) => `${s}:00 - ${e}:00`)
       .join(', ');
 
-    // Build confirmation message
-    const message = `✅ Booking Confirmed!\n\nCourt: ${dto.courtId}\nName: ${dto.name}\nDate: ${dto.date}\nTime Slots: ${timeSlots}\nPaid: ₹${dto.paidAmount}`;
+    const message = `✅ Booking Confirmed!\n\n` +
+      `Court: ${dto.courtId}\n` +
+      `Name: ${dto.name}\n` +
+      `Date: ${dto.date}\n` +
+      `Time Slots: ${timeSlots}\n` +
+      `Paid: ₹${dto.paidAmount}`;
 
-    // Send via WhatsApp
     await this.whatsappService.sendMessage(dto.phoneNumber, message);
 
-    return { success: true, booking: dto };
+    return { success: true, booking };
   }
 
-  async findAll() {
-    return this.bookings;
+  async findAll(): Promise<Booking[]> {
+    return this.bookingModel.find().exec();
   }
 
-  async findByPhoneNumber(phoneNumber: string) {
-    return this.bookings.filter(b => b.phoneNumber === phoneNumber);
+  async findByPhoneNumber(phoneNumber: string): Promise<Booking[]> {
+    return this.bookingModel.find({ phoneNumber }).exec();
   }
 
-  async getUnavailableSlots(courtId: string, date: string) {
-    return this.bookings
-      .filter(b => b.courtId === courtId && b.date === date)
-      .map(b => b.timeSlots)
-      .flat();
+  async findByCourtAndDate(courtId: string, date: string): Promise<Booking[]> {
+    return this.bookingModel.find({ courtId, date }).exec();
   }
 
-  async getFullyBookedDays(courtId: string) {
-    return this.bookings
-      .filter(b => b.courtId === courtId)
-      .map(b => b.date);
+  async getUnavailableSlots(courtId: string, date: string): Promise<number[][]> {
+    const bookings = await this.findByCourtAndDate(courtId, date);
+    return bookings.flatMap(b => b.timeSlots);
+  }
+
+  async getFullyBookedDays(courtId: string): Promise<string[]> {
+    const bookings = await this.bookingModel.find({ courtId }).exec();
+    const dayMap: Record<string, number> = {};
+
+    bookings.forEach(b => {
+      if (!dayMap[b.date]) dayMap[b.date] = 0;
+      dayMap[b.date] += b.timeSlots.length;
+    });
+
+    // Example rule: fully booked if >= 16 slots are taken
+    return Object.keys(dayMap).filter(date => dayMap[date] >= 16);
   }
 }
