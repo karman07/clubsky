@@ -1,6 +1,5 @@
 import { useState } from 'react'
 
-// Mock hooks for demonstration
 const useAuth = () => ({
   login: async (email: string, password: string) => {
     // Simulate login delay
@@ -26,7 +25,7 @@ export default function Login() {
     setLoading(true)
     try {
       await login(email, password)
-      alert('Login successful! (Demo)')
+      alert('Login successful!')
     } catch (err: any) {
       setError(err?.message || 'Login failed')
     } finally {
@@ -88,10 +87,7 @@ export default function Login() {
               {loading ? 'Logging in...' : 'Login'}
             </button>
           </div>
-          
-          <div className="mt-6 text-center text-sm text-blue-600">
-            Demo: Use test@example.com / password
-          </div>
+    
         </div>
       </div>
     </div>

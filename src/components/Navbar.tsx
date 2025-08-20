@@ -38,9 +38,8 @@ export default function Navbar() {
             {user ? (
               <></>
             ) : (
-              <Button asChild>
-                <Link to="/login">Login</Link>
-              </Button>
+             <>
+             </>
             )}
           </div>
         </div>
