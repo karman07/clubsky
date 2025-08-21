@@ -38,12 +38,16 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
     isSmallMobile: false,
     isMediumMobile: false,
     isLargeMobile: false,
+    isTablet: false,
+    isSmallTablet: false,
+    isLargeTablet: false,
+    isDesktop: false,
     width: 0,
     height: 0
   });
   const dateSliderRef = useRef(null);
 
-  // Enhanced screen size detection
+  // Enhanced screen size detection with better tablet support
   useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
@@ -52,10 +56,19 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
       setScreenSize({
         width,
         height,
+        // Mobile breakpoints
         isMobile: width < 768,
-        isSmallMobile: width < 390, // iPhone SE, older Android phones
-        isMediumMobile: width >= 390 && width < 430, // Standard phones
-        isLargeMobile: width >= 430 && width < 768, // Large phones, small tablets
+        isSmallMobile: width < 375, // iPhone SE, older phones
+        isMediumMobile: width >= 375 && width < 414, // Standard phones
+        isLargeMobile: width >= 414 && width < 768, // Large phones
+        
+        // Tablet breakpoints - improved for Surface Pro 7 and similar devices
+        isTablet: width >= 768 && width < 1200,
+        isSmallTablet: width >= 768 && width < 900, // iPad Mini, smaller tablets
+        isLargeTablet: width >= 900 && width < 1200, // Surface Pro 7, iPad Pro
+        
+        // Desktop
+        isDesktop: width >= 1200
       });
     };
     
@@ -64,7 +77,16 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  const { isMobile, isSmallMobile, isMediumMobile, isLargeMobile } = screenSize;
+  const { 
+    isMobile, 
+    isSmallMobile, 
+    isMediumMobile, 
+    isLargeMobile, 
+    isTablet,
+    isSmallTablet,
+    isLargeTablet,
+    isDesktop 
+  } = screenSize;
 
   // Time slots (6 AM to 11 PM in 1-hour intervals)
   const timeSlots = useMemo(() => {
@@ -203,6 +225,8 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
       if (isSmallMobile) scrollAmount = 80;
       else if (isMediumMobile) scrollAmount = 100;
       else if (isLargeMobile) scrollAmount = 140;
+      else if (isSmallTablet) scrollAmount = 160;
+      else if (isLargeTablet) scrollAmount = 180;
       
       dateSliderRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
@@ -238,16 +262,17 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
            selectedCourtId?.toString() === currentCourtId?.toString();
   };
 
-  // Responsive class helpers
+  // Enhanced responsive class helpers with better tablet support
   const getResponsiveClasses = () => {
     if (isSmallMobile) {
       return {
         container: 'px-2 py-2',
-        card: 'p-2 sm:p-3',
+        card: 'p-3',
         text: {
           base: 'text-xs',
           sm: 'text-xs',
-          lg: 'text-sm'
+          lg: 'text-sm',
+          xl: 'text-base'
         },
         button: 'p-2 text-xs',
         grid: {
@@ -264,7 +289,8 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
         text: {
           base: 'text-sm',
           sm: 'text-xs',
-          lg: 'text-base'
+          lg: 'text-base',
+          xl: 'text-lg'
         },
         button: 'p-2.5 text-sm',
         grid: {
@@ -281,7 +307,8 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
         text: {
           base: 'text-sm',
           sm: 'text-xs',
-          lg: 'text-base'
+          lg: 'text-base',
+          xl: 'text-lg'
         },
         button: 'p-3 text-sm',
         grid: {
@@ -291,14 +318,54 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
         },
         spacing: 'space-y-4'
       };
+    } else if (isSmallTablet) {
+      // iPad Mini, smaller tablets - optimized layout
+      return {
+        container: 'px-5 py-4',
+        card: 'p-5',
+        text: {
+          base: 'text-sm',
+          sm: 'text-sm',
+          lg: 'text-lg',
+          xl: 'text-xl'
+        },
+        button: 'p-3 text-sm',
+        grid: {
+          courts: 'space-y-3',
+          timeSlots: 'grid-cols-4 gap-2.5',
+          dates: 'gap-2.5'
+        },
+        spacing: 'space-y-5'
+      };
+    } else if (isLargeTablet) {
+      // Surface Pro 7, iPad Pro - optimized for larger tablets
+      return {
+        container: 'px-6 py-5',
+        card: 'p-6',
+        text: {
+          base: 'text-base',
+          sm: 'text-sm',
+          lg: 'text-lg',
+          xl: 'text-xl'
+        },
+        button: 'p-4 text-base',
+        grid: {
+          courts: 'space-y-4',
+          timeSlots: 'grid-cols-5 gap-3',
+          dates: 'gap-3'
+        },
+        spacing: 'space-y-6'
+      };
     } else {
+      // Desktop
       return {
         container: 'px-4 py-6',
         card: 'p-6',
         text: {
           base: 'text-base',
           sm: 'text-sm',
-          lg: 'text-lg'
+          lg: 'text-lg',
+          xl: 'text-xl'
         },
         button: 'p-4 text-base',
         grid: {
@@ -313,11 +380,16 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
 
   const responsive = getResponsiveClasses();
 
+  // Determine layout type - tablet uses hybrid layout
+  const shouldUseMobileLayout = isMobile;
+  const shouldUseTabletLayout = isTablet;
+  const shouldUseDesktopLayout = isDesktop;
+
   if (courtsLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="text-center">
-          <div className={`${isSmallMobile ? 'w-10 h-10' : 'w-12 h-12 sm:w-16 sm:h-16'} border-4 border-gray-200 border-t-4 rounded-full animate-spin mx-auto mb-4`} style={{ borderTopColor: '#24392B' }}></div>
+          <div className={`${isSmallMobile ? 'w-10 h-10' : isTablet ? 'w-16 h-16' : 'w-12 h-12 sm:w-16 sm:h-16'} border-4 border-gray-200 border-t-4 rounded-full animate-spin mx-auto mb-4`} style={{ borderTopColor: '#24392B' }}></div>
           <p className={`text-gray-700 ${responsive.text.sm}`}>Loading courts...</p>
         </div>
       </div>
@@ -346,13 +418,13 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
           <div className="flex items-center gap-2 sm:gap-3">
             <button 
               onClick={handleBackToCourts}
-              className={`${isSmallMobile ? 'p-1' : 'p-1.5 sm:p-2'} hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 touch-manipulation`}
+              className={`${isSmallMobile ? 'p-1' : isTablet ? 'p-2' : 'p-1.5 sm:p-2'} hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 touch-manipulation`}
             >
-              <ArrowLeft className={`${isSmallMobile ? 'w-4 h-4' : 'w-4 h-4 sm:w-5 sm:h-5'} text-gray-700`} />
+              <ArrowLeft className={`${isSmallMobile ? 'w-4 h-4' : isTablet ? 'w-6 h-6' : 'w-4 h-4 sm:w-5 sm:h-5'} text-gray-700`} />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className={`${responsive.text.lg} font-bold text-gray-900 truncate`}>Book a Court</h1>
-              <p className={`${responsive.text.sm} text-gray-700 ${isSmallMobile ? 'hidden' : 'hidden sm:block'}`}>Select your preferred time and court</p>
+              <h1 className={`${responsive.text.xl} font-bold text-gray-900 truncate`}>Book a Court</h1>
+              <p className={`${responsive.text.sm} text-gray-700 ${isSmallMobile ? 'hidden' : isTablet ? 'block' : 'hidden sm:block'}`}>Select your preferred time and court</p>
             </div>
           </div>
         </div>
@@ -360,7 +432,7 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
 
       <div className={`max-w-7xl mx-auto ${responsive.container}`}>
         {/* Mobile Layout */}
-        {isMobile ? (
+        {shouldUseMobileLayout && (
           <div className={`${responsive.spacing} pb-32`}>
             {/* Court Selection - Mobile */}
             <div className={`bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 ${responsive.card}`}>
@@ -572,8 +644,227 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
               </div>
             </div>
           </div>
-        ) : (
-          /* Desktop Layout */
+        )}
+
+        {/* Tablet Layout - Hybrid approach for Surface Pro 7 and similar devices */}
+        {shouldUseTabletLayout && (
+          <div className={`${responsive.spacing} ${selectedSlots.size > 0 ? 'pb-32' : 'pb-6'}`}>
+            {/* Court Selection - Tablet */}
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${responsive.card}`}>
+              <h2 className={`${responsive.text.xl} font-semibold mb-5`} style={{ color: '#24392B' }}>Select Court</h2>
+              <div className={responsive.grid.courts}>
+                {courts.map((court) => {
+                  const isSelected = isCourtSelected(court);
+                  
+                  return (
+                    <div
+                      key={court._id || court.id}
+                      onClick={() => handleCourtChange(court)}
+                      className={`${responsive.button} rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-md ${
+                        isSelected
+                          ? 'border-current shadow-md' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      style={{ 
+                        borderColor: isSelected ? '#24392B' : undefined,
+                        backgroundColor: isSelected ? '#f8fffe' : undefined
+                      }}
+                    >
+                      <div className="flex items-center gap-4">
+                        {court.imageUrl ? (
+                          <img
+                            src={court.imageUrl}
+                            alt={court.name}
+                            className={`${isLargeTablet ? 'w-20 h-20' : 'w-16 h-16'} rounded-lg object-cover flex-shrink-0`}
+                          />
+                        ) : (
+                          <div 
+                            className={`${isLargeTablet ? 'w-20 h-20 text-xl' : 'w-16 h-16 text-lg'} rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0`}
+                            style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
+                          >
+                            {court.name.charAt(0)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <h3 className={`font-semibold ${responsive.text.lg} text-gray-900 truncate`}>
+                                {court.name}
+                              </h3>
+                              <div className={`flex items-center gap-2 ${responsive.text.base} text-gray-600 mt-1`}>
+                                <MapPin className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate">{court.location}</span>
+                              </div>
+                              {court.description && (
+                                <p className={`${responsive.text.sm} text-gray-600 mt-1 line-clamp-1`}>
+                                  {court.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <span className={`font-semibold ${responsive.text.base} text-gray-900 whitespace-nowrap`}>
+                                ₹{court.price}/hr
+                              </span>
+                              {isSelected && (
+                                <div className="text-white p-2 rounded-full" style={{ backgroundColor: '#24392B' }}>
+                                  <Check className="w-4 h-4" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {court.features && court.features.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {court.features.slice(0, isLargeTablet ? 4 : 3).map((feature, index) => (
+                                <span
+                                  key={index}
+                                  className={`px-2 py-1 ${responsive.text.sm} bg-gray-100 text-gray-700 rounded-full`}
+                                >
+                                  {feature}
+                                </span>
+                              ))}
+                              {court.features.length > (isLargeTablet ? 4 : 3) && (
+                                <span className={`px-2 py-1 ${responsive.text.sm} bg-gray-100 text-gray-700 rounded-full`}>
+                                  +{court.features.length - (isLargeTablet ? 4 : 3)} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Date Selection - Tablet */}
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${responsive.card}`}>
+              <h2 className={`${responsive.text.xl} font-semibold mb-5`} style={{ color: '#24392B' }}>Select Date</h2>
+              <div className="relative">
+                <button
+                  onClick={() => scrollDateSlider('left')}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white rounded-full shadow-md border hover:shadow-lg transition-all"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-700" />
+                </button>
+                <div
+                  ref={dateSliderRef}
+                  className={`flex ${responsive.grid.dates} overflow-x-auto scrollbar-hide py-2 px-12`}
+                  style={{ 
+                    scrollbarWidth: 'none', 
+                    msOverflowStyle: 'none',
+                    WebkitOverflowScrolling: 'touch'
+                  }}
+                >
+                  {dateOptions.map((date) => (
+                    <button
+                      key={date.value}
+                      onClick={() => handleDateChange(date.value)}
+                      className={`flex-shrink-0 ${isLargeTablet ? 'p-4 min-w-[140px]' : 'p-3 min-w-[120px]'} rounded-xl border-2 text-center transition-all duration-300 ${
+                        selectedDate === date.value
+                          ? 'text-white shadow-md'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-800 hover:shadow-sm'
+                      }`}
+                      style={{
+                        background: selectedDate === date.value 
+                          ? 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)'
+                          : undefined,
+                        borderColor: selectedDate === date.value ? '#24392B' : undefined
+                      }}
+                    >
+                      <div className={`${responsive.text.base} font-medium`}>
+                        {date.display}
+                      </div>
+                      <div className={`${responsive.text.sm} mt-1 ${selectedDate === date.value ? 'text-white opacity-90' : 'text-gray-600'}`}>
+                        {date.fullDate.getFullYear()}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => scrollDateSlider('right')}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white rounded-full shadow-md border hover:shadow-lg transition-all"
+                >
+                  <ChevronRight className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+            </div>
+
+            {/* Time Slots - Tablet */}
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${responsive.card}`}>
+              <h2 className={`${responsive.text.xl} font-semibold mb-5`} style={{ color: '#24392B' }}>Available Time Slots</h2>
+              <div className={`grid ${responsive.grid.timeSlots}`}>
+                {timeSlots.map((slot) => {
+                  const isUnavailable = unavailableSlots.has(slot.value);
+                  const isSelected = selectedSlots.has(slot.value);
+                  
+                  return (
+                    <button
+                      key={slot.value}
+                      onClick={() => handleSlotToggle(slot.value)}
+                      disabled={isUnavailable}
+                      className={`${responsive.button} rounded-xl border-2 text-center transition-all duration-300 ${
+                        isUnavailable
+                          ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
+                          : isSelected
+                          ? 'text-white shadow-md'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-800 hover:shadow-sm'
+                      }`}
+                      style={{
+                        background: isSelected && !isUnavailable 
+                          ? 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)'
+                          : undefined,
+                        borderColor: isSelected && !isUnavailable ? '#24392B' : undefined
+                      }}
+                    >
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Clock className="w-4 h-4" />
+                        <span className={`font-medium ${responsive.text.base}`}>
+                          {slot.display}
+                        </span>
+                      </div>
+                      <div className={`${responsive.text.sm} ${
+                        isUnavailable 
+                          ? 'text-gray-500' 
+                          : isSelected 
+                          ? 'text-white opacity-90' 
+                          : 'text-gray-600'
+                      }`}>
+                        {isUnavailable ? 'Booked' : isSelected ? 'Selected' : 'Available'}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tablet Booking Summary - Fixed at bottom when slots selected */}
+            {selectedSlots.size > 0 && (
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+                <div className={`${responsive.container} bg-gray-50 border-b`}>
+                  <div className={`flex items-center justify-between ${responsive.text.base}`}>
+                    <span className="text-gray-700 truncate flex-1 mr-4">
+                      {selectedSlots.size} slot{selectedSlots.size !== 1 ? 's' : ''} selected • {selectedCourt?.name}
+                    </span>
+                    <span className="font-semibold text-gray-900 flex-shrink-0 text-lg">₹{totalPrice}</span>
+                  </div>
+                </div>
+                <div className={responsive.container}>
+                  <button
+                    onClick={handleContinueToDetails}
+                    className={`w-full text-white ${responsive.button} rounded-xl font-semibold transition-all duration-300`}
+                    style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
+                  >
+                    Continue to Details (₹{totalPrice})
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Desktop Layout */}
+        {shouldUseDesktopLayout && (
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
