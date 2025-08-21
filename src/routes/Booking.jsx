@@ -33,21 +33,38 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
   const [unavailableSlots, setUnavailableSlots] = useState(new Set());
   const [fullyBookedDays, setFullyBookedDays] = useState(new Set());
   const [showBookingDetails, setShowBookingDetails] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isSmallMobile, setIsSmallMobile] = useState(false);
+  const [screenSize, setScreenSize] = useState({
+    isMobile: false,
+    isSmallMobile: false,
+    isMediumMobile: false,
+    isLargeMobile: false,
+    width: 0,
+    height: 0
+  });
   const dateSliderRef = useRef(null);
 
-  // Check if mobile on mount and resize
+  // Enhanced screen size detection
   useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
-      setIsMobile(width < 768);
-      setIsSmallMobile(width < 400); // iPhone 5s and similar
+      const height = window.innerHeight;
+      
+      setScreenSize({
+        width,
+        height,
+        isMobile: width < 768,
+        isSmallMobile: width < 390, // iPhone SE, older Android phones
+        isMediumMobile: width >= 390 && width < 430, // Standard phones
+        isLargeMobile: width >= 430 && width < 768, // Large phones, small tablets
+      });
     };
+    
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  const { isMobile, isSmallMobile, isMediumMobile, isLargeMobile } = screenSize;
 
   // Time slots (6 AM to 11 PM in 1-hour intervals)
   const timeSlots = useMemo(() => {
@@ -106,11 +123,9 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
           setSelectedCourt(court);
         } else {
           console.log('Court not found with ID:', finalCourtId, 'Available courts:', courts);
-          // If no court found with the ID, don't set any court as selected
           setSelectedCourt(null);
         }
       } else {
-        // Only set first court as default if no specific court ID is provided
         console.log('No court ID provided, setting first court as default');
         setSelectedCourt(courts[0]);
       }
@@ -173,19 +188,22 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
   };
 
   const handleCourtChange = (court) => {
-    // Only allow selection of one court at a time
     setSelectedCourt(court);
-    setSelectedSlots(new Set()); // Clear selected slots when court changes
+    setSelectedSlots(new Set());
   };
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
-    setSelectedSlots(new Set()); // Clear selected slots when date changes
+    setSelectedSlots(new Set());
   };
 
   const scrollDateSlider = (direction) => {
     if (dateSliderRef.current) {
-      const scrollAmount = isSmallMobile ? 100 : isMobile ? 120 : 200;
+      let scrollAmount = 120;
+      if (isSmallMobile) scrollAmount = 80;
+      else if (isMediumMobile) scrollAmount = 100;
+      else if (isLargeMobile) scrollAmount = 140;
+      
       dateSliderRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
@@ -220,12 +238,87 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
            selectedCourtId?.toString() === currentCourtId?.toString();
   };
 
+  // Responsive class helpers
+  const getResponsiveClasses = () => {
+    if (isSmallMobile) {
+      return {
+        container: 'px-2 py-2',
+        card: 'p-2 sm:p-3',
+        text: {
+          base: 'text-xs',
+          sm: 'text-xs',
+          lg: 'text-sm'
+        },
+        button: 'p-2 text-xs',
+        grid: {
+          courts: 'space-y-2',
+          timeSlots: 'grid-cols-2 gap-1.5',
+          dates: 'gap-1.5'
+        },
+        spacing: 'space-y-2'
+      };
+    } else if (isMediumMobile) {
+      return {
+        container: 'px-3 py-3',
+        card: 'p-3 sm:p-4',
+        text: {
+          base: 'text-sm',
+          sm: 'text-xs',
+          lg: 'text-base'
+        },
+        button: 'p-2.5 text-sm',
+        grid: {
+          courts: 'space-y-2.5',
+          timeSlots: 'grid-cols-3 gap-2',
+          dates: 'gap-2'
+        },
+        spacing: 'space-y-3'
+      };
+    } else if (isLargeMobile) {
+      return {
+        container: 'px-4 py-3',
+        card: 'p-4',
+        text: {
+          base: 'text-sm',
+          sm: 'text-xs',
+          lg: 'text-base'
+        },
+        button: 'p-3 text-sm',
+        grid: {
+          courts: 'space-y-3',
+          timeSlots: 'grid-cols-3 gap-2.5',
+          dates: 'gap-2.5'
+        },
+        spacing: 'space-y-4'
+      };
+    } else {
+      return {
+        container: 'px-4 py-6',
+        card: 'p-6',
+        text: {
+          base: 'text-base',
+          sm: 'text-sm',
+          lg: 'text-lg'
+        },
+        button: 'p-4 text-base',
+        grid: {
+          courts: 'space-y-4',
+          timeSlots: 'grid-cols-4 gap-3',
+          dates: 'gap-4'
+        },
+        spacing: 'space-y-6'
+      };
+    }
+  };
+
+  const responsive = getResponsiveClasses();
+
   if (courtsLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-gray-200 border-t-4 rounded-full animate-spin mx-auto mb-4" style={{ borderTopColor: '#24392B' }}></div>
-          <p className="text-gray-700 text-sm sm:text-base">Loading courts...</p>
+          <div className={`${isSmallMobile ? 'w-10 h-10' : 'w-12 h-12 sm:w-16 sm:h-16'} border-4 border-gray-200 border-t-4 rounded-full animate-spin mx-auto mb-4`} style={{ borderTopColor: '#24392B' }}></div>
+          <p className={`text-gray-700 ${responsive.text.sm}`}>Loading courts...</p>
         </div>
       </div>
     );
@@ -249,30 +342,30 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
+        <div className={`max-w-7xl mx-auto ${responsive.container}`}>
           <div className="flex items-center gap-2 sm:gap-3">
             <button 
               onClick={handleBackToCourts}
-              className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 touch-manipulation"
+              className={`${isSmallMobile ? 'p-1' : 'p-1.5 sm:p-2'} hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 touch-manipulation`}
             >
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+              <ArrowLeft className={`${isSmallMobile ? 'w-4 h-4' : 'w-4 h-4 sm:w-5 sm:h-5'} text-gray-700`} />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 truncate">Book a Court</h1>
-              <p className="text-xs text-gray-700 hidden sm:block">Select your preferred time and court</p>
+              <h1 className={`${responsive.text.lg} font-bold text-gray-900 truncate`}>Book a Court</h1>
+              <p className={`${responsive.text.sm} text-gray-700 ${isSmallMobile ? 'hidden' : 'hidden sm:block'}`}>Select your preferred time and court</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-6">
+      <div className={`max-w-7xl mx-auto ${responsive.container}`}>
         {/* Mobile Layout */}
         {isMobile ? (
-          <div className="space-y-3 pb-32">
+          <div className={`${responsive.spacing} pb-32`}>
             {/* Court Selection - Mobile */}
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4" style={{ color: '#24392B' }}>Select Court</h2>
-              <div className="space-y-2 sm:space-y-3">
+            <div className={`bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 ${responsive.card}`}>
+              <h2 className={`${responsive.text.lg} font-semibold mb-3 sm:mb-4`} style={{ color: '#24392B' }}>Select Court</h2>
+              <div className={responsive.grid.courts}>
                 {courts.map((court) => {
                   const isSelected = isCourtSelected(court);
                   
@@ -280,7 +373,7 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                     <div
                       key={court._id || court.id}
                       onClick={() => handleCourtChange(court)}
-                      className={`p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-all duration-300 touch-manipulation active:scale-98 ${
+                      className={`${responsive.button} rounded-lg border-2 cursor-pointer transition-all duration-300 touch-manipulation active:scale-98 ${
                         isSelected
                           ? 'border-current shadow-sm' 
                           : 'border-gray-200 hover:border-gray-300 active:bg-gray-50'
@@ -290,16 +383,16 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                         backgroundColor: isSelected ? '#f8fffe' : undefined
                       }}
                     >
-                      <div className="flex items-center gap-2 sm:gap-3">
+                      <div className={`flex items-center ${isSmallMobile ? 'gap-2' : 'gap-2 sm:gap-3'}`}>
                         {court.imageUrl ? (
                           <img
                             src={court.imageUrl}
                             alt={court.name}
-                            className={`${isSmallMobile ? 'w-10 h-10' : 'w-12 h-12 sm:w-14 sm:h-14'} rounded-lg object-cover flex-shrink-0`}
+                            className={`${isSmallMobile ? 'w-8 h-8' : 'w-10 h-10 sm:w-12 sm:h-12'} rounded-lg object-cover flex-shrink-0`}
                           />
                         ) : (
                           <div 
-                            className={`${isSmallMobile ? 'w-10 h-10 text-sm' : 'w-12 h-12 sm:w-14 sm:h-14 text-base sm:text-lg'} rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0`}
+                            className={`${isSmallMobile ? 'w-8 h-8 text-xs' : 'w-10 h-10 sm:w-12 sm:h-12 text-sm'} rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0`}
                             style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
                           >
                             {court.name.charAt(0)}
@@ -308,37 +401,37 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-1 sm:gap-2">
                             <div className="min-w-0 flex-1">
-                              <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                              <h3 className={`font-semibold ${responsive.text.base} text-gray-900 truncate`}>
                                 {court.name}
                               </h3>
-                              <div className="flex items-center gap-1 text-xs text-gray-600 mt-0.5 sm:mt-1">
-                                <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                              <div className={`flex items-center gap-1 ${responsive.text.sm} text-gray-600 mt-0.5 sm:mt-1`}>
+                                <MapPin className={`${isSmallMobile ? 'w-2 h-2' : 'w-2.5 h-2.5 sm:w-3 sm:h-3'} flex-shrink-0`} />
                                 <span className="truncate">{court.location}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                              <span className="font-semibold text-xs sm:text-sm text-gray-900 whitespace-nowrap">
+                              <span className={`font-semibold ${responsive.text.sm} text-gray-900 whitespace-nowrap`}>
                                 ₹{court.price}/hr
                               </span>
                               {isSelected && (
-                                <div className="text-white p-0.5 sm:p-1 rounded-full" style={{ backgroundColor: '#24392B' }}>
-                                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                <div className={`text-white ${isSmallMobile ? 'p-0.5' : 'p-0.5 sm:p-1'} rounded-full`} style={{ backgroundColor: '#24392B' }}>
+                                  <Check className={`${isSmallMobile ? 'w-2 h-2' : 'w-2.5 h-2.5 sm:w-3 sm:h-3'}`} />
                                 </div>
                               )}
                             </div>
                           </div>
                           {court.features && court.features.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2">
+                            <div className={`flex flex-wrap gap-1 ${isSmallMobile ? 'mt-1' : 'mt-1.5 sm:mt-2'}`}>
                               {court.features.slice(0, isSmallMobile ? 1 : 2).map((feature, index) => (
                                 <span
                                   key={index}
-                                  className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                                  className={`${isSmallMobile ? 'px-1 py-0.5 text-xs' : 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs'} bg-gray-100 text-gray-700 rounded-full`}
                                 >
                                   {feature}
                                 </span>
                               ))}
                               {court.features.length > (isSmallMobile ? 1 : 2) && (
-                                <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                                <span className={`${isSmallMobile ? 'px-1 py-0.5 text-xs' : 'px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs'} bg-gray-100 text-gray-700 rounded-full`}>
                                   +{court.features.length - (isSmallMobile ? 1 : 2)}
                                 </span>
                               )}
@@ -353,18 +446,18 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
             </div>
 
             {/* Date Selection - Mobile */}
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4" style={{ color: '#24392B' }}>Select Date</h2>
+            <div className={`bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 ${responsive.card}`}>
+              <h2 className={`${responsive.text.lg} font-semibold mb-3 sm:mb-4`} style={{ color: '#24392B' }}>Select Date</h2>
               <div className="relative">
                 <button
                   onClick={() => scrollDateSlider('left')}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 sm:p-2 bg-white rounded-full shadow-md border hover:shadow-lg transition-all touch-manipulation active:scale-95"
+                  className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 ${isSmallMobile ? 'p-1' : 'p-1.5 sm:p-2'} bg-white rounded-full shadow-md border hover:shadow-lg transition-all touch-manipulation active:scale-95`}
                 >
-                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
+                  <ChevronLeft className={`${isSmallMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} text-gray-700`} />
                 </button>
                 <div
                   ref={dateSliderRef}
-                  className={`flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide py-1 ${isSmallMobile ? 'px-8' : 'px-10'}`}
+                  className={`flex ${responsive.grid.dates} overflow-x-auto scrollbar-hide py-1 ${isSmallMobile ? 'px-6' : 'px-8 sm:px-10'}`}
                   style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
@@ -375,11 +468,11 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                     <button
                       key={date.value}
                       onClick={() => handleDateChange(date.value)}
-                      className={`flex-shrink-0 p-2 sm:p-3 rounded-lg border-2 text-center transition-all duration-300 touch-manipulation active:scale-95 ${
+                      className={`flex-shrink-0 ${isSmallMobile ? 'p-1.5 min-w-[50px]' : 'p-2 sm:p-3 min-w-[60px] sm:min-w-[70px]'} rounded-lg border-2 text-center transition-all duration-300 touch-manipulation active:scale-95 ${
                         selectedDate === date.value
                           ? 'text-white shadow-sm'
                           : 'border-gray-200 hover:border-gray-300 text-gray-800 active:bg-gray-50'
-                      } ${isSmallMobile ? 'min-w-[60px]' : 'min-w-[70px] sm:min-w-[80px]'}`}
+                      }`}
                       style={{
                         background: selectedDate === date.value 
                           ? 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)'
@@ -387,10 +480,12 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                         borderColor: selectedDate === date.value ? '#24392B' : undefined
                       }}
                     >
-                      <div className={`${isSmallMobile ? 'text-xs' : 'text-xs sm:text-sm'} font-medium leading-tight whitespace-nowrap`}>
-                        {isSmallMobile ? date.display.split(' ').slice(0, 2).join(' ') : date.display}
+                      <div className={`${responsive.text.sm} font-medium leading-tight whitespace-nowrap`}>
+                        {isSmallMobile 
+                          ? date.display.split(' ').slice(0, 2).join(' ').replace(',', '') 
+                          : date.display}
                       </div>
-                      <div className={`${isSmallMobile ? 'text-xs mt-0' : 'text-xs mt-0.5'} ${selectedDate === date.value ? 'text-white opacity-90' : 'text-gray-600'}`}>
+                      <div className={`${responsive.text.sm} ${isSmallMobile ? 'mt-0' : 'mt-0.5'} ${selectedDate === date.value ? 'text-white opacity-90' : 'text-gray-600'}`}>
                         {isSmallMobile ? date.fullDate.getDate() : date.fullDate.getFullYear()}
                       </div>
                     </button>
@@ -398,17 +493,17 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                 </div>
                 <button
                   onClick={() => scrollDateSlider('right')}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-1.5 sm:p-2 bg-white rounded-full shadow-md border hover:shadow-lg transition-all touch-manipulation active:scale-95"
+                  className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 ${isSmallMobile ? 'p-1' : 'p-1.5 sm:p-2'} bg-white rounded-full shadow-md border hover:shadow-lg transition-all touch-manipulation active:scale-95`}
                 >
-                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
+                  <ChevronRight className={`${isSmallMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} text-gray-700`} />
                 </button>
               </div>
             </div>
 
             {/* Time Slots - Mobile */}
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4" style={{ color: '#24392B' }}>Available Time Slots</h2>
-              <div className={`grid gap-2 sm:gap-3 ${isSmallMobile ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+            <div className={`bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 ${responsive.card}`}>
+              <h2 className={`${responsive.text.lg} font-semibold mb-3 sm:mb-4`} style={{ color: '#24392B' }}>Available Time Slots</h2>
+              <div className={`grid ${responsive.grid.timeSlots}`}>
                 {timeSlots.map((slot) => {
                   const isUnavailable = unavailableSlots.has(slot.value);
                   const isSelected = selectedSlots.has(slot.value);
@@ -418,7 +513,7 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                       key={slot.value}
                       onClick={() => handleSlotToggle(slot.value)}
                       disabled={isUnavailable}
-                      className={`p-2 sm:p-3 rounded-lg border-2 text-center transition-all duration-300 touch-manipulation active:scale-95 ${
+                      className={`${isSmallMobile ? 'p-1.5' : 'p-2 sm:p-3'} rounded-lg border-2 text-center transition-all duration-300 touch-manipulation active:scale-95 ${
                         isUnavailable
                           ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
                           : isSelected
@@ -432,13 +527,13 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                         borderColor: isSelected && !isUnavailable ? '#24392B' : undefined
                       }}
                     >
-                      <div className="flex items-center justify-center gap-1 mb-0.5 sm:mb-1">
-                        <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                        <span className={`font-medium ${isSmallMobile ? 'text-xs' : 'text-xs sm:text-sm'} whitespace-nowrap`}>
-                          {isSmallMobile ? slot.display.replace(' ', '') : slot.display}
+                      <div className={`flex items-center justify-center ${isSmallMobile ? 'gap-0.5 mb-0' : 'gap-1 mb-0.5 sm:mb-1'}`}>
+                        <Clock className={`${isSmallMobile ? 'w-2 h-2' : 'w-2.5 h-2.5 sm:w-3 sm:h-3'}`} />
+                        <span className={`font-medium ${responsive.text.sm} whitespace-nowrap`}>
+                          {isSmallMobile ? slot.display.replace(' ', '').replace(':00', '') : slot.display}
                         </span>
                       </div>
-                      <div className={`${isSmallMobile ? 'text-xs' : 'text-xs'} ${
+                      <div className={`${responsive.text.sm} ${
                         isUnavailable 
                           ? 'text-gray-500' 
                           : isSelected 
@@ -456,8 +551,8 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
             {/* Mobile Booking Summary - Fixed at bottom */}
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
               {selectedSlots.size > 0 && (
-                <div className={`px-3 sm:px-4 ${isSmallMobile ? 'py-2' : 'py-3'} bg-gray-50 border-b`}>
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                <div className={`${responsive.container} bg-gray-50 border-b`}>
+                  <div className={`flex items-center justify-between ${responsive.text.sm}`}>
                     <span className="text-gray-700 truncate flex-1 mr-2">
                       {selectedSlots.size} slot{selectedSlots.size !== 1 ? 's' : ''} • {isSmallMobile ? selectedCourt?.name.split(' ')[0] : selectedCourt?.name}
                     </span>
@@ -465,11 +560,11 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
                   </div>
                 </div>
               )}
-              <div className={`${isSmallMobile ? 'p-3' : 'p-4'}`}>
+              <div className={responsive.container}>
                 <button
                   onClick={handleContinueToDetails}
                   disabled={selectedSlots.size === 0}
-                  className={`w-full text-white ${isSmallMobile ? 'py-2.5 px-4 text-sm' : 'py-3 px-6 text-base'} rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation active:scale-98`}
+                  className={`w-full text-white ${isSmallMobile ? 'py-2 px-3 text-xs' : 'py-2.5 px-4 text-sm'} rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation active:scale-98`}
                   style={{ background: 'linear-gradient(135deg, #24392B 0%, #2d4735 100%)' }}
                 >
                   {selectedSlots.size === 0 ? 'Select Time Slots' : `Continue (₹${totalPrice})`}
