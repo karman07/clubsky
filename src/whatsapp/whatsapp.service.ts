@@ -18,7 +18,17 @@ export class WhatsappService {
       authStrategy: new LocalAuth(),
       puppeteer: {
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'], // ✅ stability on VPS
+        executablePath: '/usr/bin/chromium-browser', 
+        // 👆 Change to "google-chrome" if that's the binary on your system
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+        ],
       },
     });
 
@@ -52,8 +62,7 @@ export class WhatsappService {
       formatted = '91' + formatted;
     }
 
-    // ✅ Validate Indian mobile number (must start with 91, total 12 digits,
-    // and 10-digit part must start with 6-9)
+    // ✅ Validate Indian mobile number
     if (!/^91[6-9]\d{9}$/.test(formatted)) {
       this.logger.warn(`❌ Rejected message: ${phoneNumber} is not a valid Indian mobile number`);
       return; // stop here
