@@ -1,25 +1,36 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Client, LocalAuth } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode-terminal';
-import * as QRCode from 'qrcode'; // ✅ for saving QR as image
-import { writeFileSync } from 'fs';
+import * as QRCode from 'qrcode';
+import { writeFileSync, existsSync } from 'fs';
 
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
   private client: Client;
-
-  // Simple queue to store pending messages
   private messageQueue: { phoneNumber: string; message: string }[] = [];
   private isSending = false;
 
   constructor() {
+    // ✅ Check available Chrome/Chromium executables
+    const possiblePaths = [
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+    ];
+    const executablePath = possiblePaths.find((p) => existsSync(p));
+
+    if (!executablePath) {
+      throw new Error(
+        '❌ No Chrome/Chromium installation found. Please install one.'
+      );
+    }
+
     this.client = new Client({
       authStrategy: new LocalAuth(),
       puppeteer: {
         headless: true,
-        executablePath: '/usr/bin/chromium-browser', 
-        // 👆 Change to "google-chrome" if that's the binary on your system
+        executablePath, // ✅ system Chrome/Chromium path
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -27,16 +38,15 @@ export class WhatsappService {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
+          '--single-process',
           '--disable-gpu',
         ],
       },
     });
 
+    // ✅ QR Code handler
     this.client.on('qr', async (qr) => {
-      // Show QR in terminal
       qrcode.generate(qr, { small: false });
-
-      // Save QR as PNG file
       try {
         const qrImageBuffer = await QRCode.toBuffer(qr);
         writeFileSync('qr.png', qrImageBuffer);
@@ -46,6 +56,7 @@ export class WhatsappService {
       }
     });
 
+    // ✅ Ready event
     this.client.on('ready', () => {
       this.logger.log('✅ WhatsApp client is ready!');
     });
@@ -53,22 +64,19 @@ export class WhatsappService {
     this.client.initialize();
   }
 
+  // ✅ Send message with validation
   async sendMessage(phoneNumber: string, message: string) {
-    // Remove all non-digits
     let formatted = phoneNumber.replace(/\D/g, '');
 
-    // If user passed only 10 digits, prepend "91"
     if (formatted.length === 10) {
-      formatted = '91' + formatted;
+      formatted = '91' + formatted; // Default India
     }
 
-    // ✅ Validate Indian mobile number
     if (!/^91[6-9]\d{9}$/.test(formatted)) {
-      this.logger.warn(`❌ Rejected message: ${phoneNumber} is not a valid Indian mobile number`);
-      return; // stop here
+      this.logger.warn(`❌ Rejected message: ${phoneNumber} is not valid`);
+      return;
     }
 
-    // ✅ WhatsApp requires "@c.us"
     if (!formatted.endsWith('@c.us')) {
       formatted = formatted + '@c.us';
     }
@@ -77,6 +85,7 @@ export class WhatsappService {
     this.processQueue();
   }
 
+  // ✅ Queue processor (rate limit: 1 msg / 2 min)
   private async processQueue() {
     if (this.isSending || this.messageQueue.length === 0) return;
 
@@ -90,7 +99,7 @@ export class WhatsappService {
       this.logger.error(`❌ Failed to send message to ${phoneNumber}`, error);
     }
 
-    // Wait for 2 minutes before sending the next one
+    // wait 2 min before sending next
     await new Promise((resolve) => setTimeout(resolve, 2 * 60 * 1000));
 
     this.isSending = false;
