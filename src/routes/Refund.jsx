@@ -37,7 +37,7 @@ export default function Refund() {
               Refund Policy
             </h1>
             <p className="text-xl text-green-100 max-w-3xl mx-auto leading-relaxed">
-              Transparency is our priority. Please read Matchacha’s strict no refund and cancellation terms below.
+              Transparency is our priority. Please read Clubskyshot’s strict no refund and cancellation terms below.
             </p>
           </div>
         </div>
@@ -75,12 +75,12 @@ export default function Refund() {
 
             <div className="space-y-6 text-gray-700 text-lg leading-relaxed">
               <p>
-                Once your booking is confirmed, <strong>Matchacha does not offer any refunds or cancellations</strong> under any circumstances. 
+                Once your booking is confirmed, <strong>Clubskyshot does not offer any refunds or cancellations</strong> under any circumstances. 
                 By confirming your booking, you acknowledge and agree that all payments made are non-refundable 
                 and that cancellations are not permitted.
               </p>
               <p>
-                We at Matchacha do not support or promote the cancellation or refund of any bookings. 
+                We at Clubskyshot do not support or promote the cancellation or refund of any bookings. 
                 We encourage all customers to carefully review their booking details before confirmation.
               </p>
               <p>
