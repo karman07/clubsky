@@ -342,7 +342,7 @@ export default function Terms() {
             >
               <Phone className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+            {/* <h2 className="text-3xl font-bold text-gray-900 mb-6">
               Questions About Our Terms?
             </h2>
             <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
@@ -361,7 +361,7 @@ export default function Terms() {
               <button className="group inline-flex items-center px-8 py-4 rounded-2xl bg-gray-100 text-gray-700 font-semibold text-lg hover:bg-gray-200 hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 border border-gray-200">
                 <span>View FAQ</span>
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
