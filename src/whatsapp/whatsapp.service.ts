@@ -13,24 +13,6 @@ export class WhatsappService {
   private isSending = false;
 
   constructor() {
-    // ✅ Clean up stale Puppeteer lock if exists
-    const sessionLock = path.join(
-      process.cwd(), // safer than __dirname if running from Nest
-      'backend',
-      '.wwebjs_auth',
-      'session',
-      'SingletonLock'
-    );
-
-    if (existsSync(sessionLock)) {
-      try {
-        unlinkSync(sessionLock);
-        this.logger.log('🧹 Removed stale SingletonLock');
-      } catch (err) {
-        this.logger.warn('⚠️ Could not remove SingletonLock', err);
-      }
-    }
-
     // ✅ Check available Chrome/Chromium executables
     const possiblePaths = [
       '/usr/bin/google-chrome',
@@ -45,11 +27,14 @@ export class WhatsappService {
       );
     }
 
+    // ✅ Initialize WhatsApp client
     this.client = new Client({
       authStrategy: new LocalAuth(),
       puppeteer: {
         headless: true,
-        executablePath, // ✅ system Chrome/Chromium path
+        executablePath,
+        // 🆕 Separate Chrome userDataDir → avoids SingletonLock issues
+        userDataDir: path.join(process.cwd(), '.wwebjs_auth', 'chrome-data'),
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -79,7 +64,29 @@ export class WhatsappService {
       this.logger.log('✅ WhatsApp client is ready!');
     });
 
+    // ✅ Clean lock + initialize client
+    this.cleanupLock();
     this.client.initialize();
+  }
+
+  // 🧹 Cleanup stale SingletonLock before launching Chrome
+  private cleanupLock() {
+    const sessionLock = path.join(
+      process.cwd(),
+      'backend',
+      '.wwebjs_auth',
+      'session',
+      'SingletonLock'
+    );
+
+    if (existsSync(sessionLock)) {
+      try {
+        unlinkSync(sessionLock);
+        this.logger.log('🧹 Removed stale SingletonLock');
+      } catch (err) {
+        this.logger.warn('⚠️ Could not remove SingletonLock', err);
+      }
+    }
   }
 
   // ✅ Send message with validation
