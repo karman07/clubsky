@@ -44,8 +44,21 @@ export class WhatsappService {
   }
 
   async sendMessage(phoneNumber: string, message: string) {
-    // Format phone number: WhatsApp expects country code + number + @c.us
+    // Remove all non-digits
     let formatted = phoneNumber.replace(/\D/g, '');
+
+    // If user passed only 10 digits, prepend "91"
+    if (formatted.length === 10) {
+      formatted = '91' + formatted;
+    }
+
+    // ✅ Ensure it's an Indian number (+91 and total 12 digits)
+    if (!formatted.startsWith('91') || formatted.length !== 12) {
+      this.logger.warn(`❌ Rejected message: ${phoneNumber} is not a valid Indian number`);
+      return; // stop here
+    }
+
+    // ✅ WhatsApp requires "@c.us"
     if (!formatted.endsWith('@c.us')) {
       formatted = formatted + '@c.us';
     }
