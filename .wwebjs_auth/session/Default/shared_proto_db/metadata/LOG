@@ -1,3 +1,2 @@
-2025/08/19-18:44:48.031 493c Reusing MANIFEST C:\Users\Dell\Desktop\war\clubskyshot\backend\.wwebjs_auth\session\Default\shared_proto_db\metadata/MANIFEST-000001
-2025/08/19-18:44:48.045 493c Recovering log #3
-2025/08/19-18:44:48.045 493c Reusing old log C:\Users\Dell\Desktop\war\clubskyshot\backend\.wwebjs_auth\session\Default\shared_proto_db\metadata/000003.log 
+2025/08/22-10:18:40.545 5380 Creating DB C:\Users\Dell\Desktop\war\clubskyshot\backend\.wwebjs_auth\session\Default\shared_proto_db\metadata since it was missing.
+2025/08/22-10:18:40.568 5380 Reusing MANIFEST C:\Users\Dell\Desktop\war\clubskyshot\backend\.wwebjs_auth\session\Default\shared_proto_db\metadata/MANIFEST-000001

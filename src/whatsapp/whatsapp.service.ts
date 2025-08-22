@@ -52,9 +52,10 @@ export class WhatsappService {
       formatted = '91' + formatted;
     }
 
-    // ✅ Ensure it's an Indian number (+91 and total 12 digits)
-    if (!formatted.startsWith('91') || formatted.length !== 12) {
-      this.logger.warn(`❌ Rejected message: ${phoneNumber} is not a valid Indian number`);
+    // ✅ Validate Indian mobile number (must start with 91, total 12 digits,
+    // and 10-digit part must start with 6-9)
+    if (!/^91[6-9]\d{9}$/.test(formatted)) {
+      this.logger.warn(`❌ Rejected message: ${phoneNumber} is not a valid Indian mobile number`);
       return; // stop here
     }
 
