@@ -1,4 +1,10 @@
-import { IsArray, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateBookingDto {
@@ -15,6 +21,7 @@ export class CreateBookingDto {
   phoneNumber: string;
 
   @IsArray()
+  @ValidateNested({ each: true })
   @Type(() => Array)
   timeSlots: number[][];
 
@@ -24,4 +31,20 @@ export class CreateBookingDto {
 
   @IsNumber()
   paidAmount: number;
+
+  @IsString()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  paymentId: string;
+
+  @IsString()
+  orderId: string;
+
+  @IsString()
+  paymentSignature: string;
+
+  @IsString()
+  paymentStatus: string;
 }

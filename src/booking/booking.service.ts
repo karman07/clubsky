@@ -13,6 +13,23 @@ export class BookingService {
   ) {}
 
   async create(dto: CreateBookingDto & { timeSlots: number[][] }) {
+    // ✅ Validate time slots before saving
+    for (const slot of dto.timeSlots) {
+      if (
+        !Array.isArray(slot) ||
+        slot.length !== 2 ||
+        typeof slot[0] !== 'number' ||
+        typeof slot[1] !== 'number' ||
+        slot[0] >= slot[1]
+      ) {
+        throw new BadRequestException(
+          `Invalid time slot: ${JSON.stringify(
+            slot,
+          )}. Each slot must be [start, end] like [6,7]`,
+        );
+      }
+    }
+
     // 1. Fetch all existing bookings for the same court & date
     const existing = await this.bookingModel.find({
       courtId: dto.courtId,
@@ -41,7 +58,8 @@ export class BookingService {
       .map(([s, e]) => `${s}:00 - ${e}:00`)
       .join(', ');
 
-    const message = `✅ Booking Confirmed!\n\n` +
+    const message =
+      `✅ Booking Confirmed!\n\n` +
       `Court: ${dto.courtId}\n` +
       `Name: ${dto.name}\n` +
       `Date: ${dto.date}\n` +
@@ -65,21 +83,24 @@ export class BookingService {
     return this.bookingModel.find({ courtId, date }).exec();
   }
 
-  async getUnavailableSlots(courtId: string, date: string): Promise<number[][]> {
+  async getUnavailableSlots(
+    courtId: string,
+    date: string,
+  ): Promise<number[][]> {
     const bookings = await this.findByCourtAndDate(courtId, date);
-    return bookings.flatMap(b => b.timeSlots);
+    return bookings.flatMap((b) => b.timeSlots);
   }
 
   async getFullyBookedDays(courtId: string): Promise<string[]> {
     const bookings = await this.bookingModel.find({ courtId }).exec();
     const dayMap: Record<string, number> = {};
 
-    bookings.forEach(b => {
+    bookings.forEach((b) => {
       if (!dayMap[b.date]) dayMap[b.date] = 0;
       dayMap[b.date] += b.timeSlots.length;
     });
 
     // Example rule: fully booked if >= 16 slots are taken
-    return Object.keys(dayMap).filter(date => dayMap[date] >= 16);
+    return Object.keys(dayMap).filter((date) => dayMap[date] >= 16);
   }
 }
