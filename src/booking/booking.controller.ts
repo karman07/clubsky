@@ -1,4 +1,3 @@
-// src/booking/booking.controller.ts
 import {
   Controller,
   Get,
@@ -20,8 +19,9 @@ export class BookingController {
    * Robust parser for incoming timeSlots payloads.
    * Accepts:
    *  - real arrays: [[21,22]]
+   *  - single slot: [9,10]
    *  - stringified arrays: '[[21,22]]'
-   *  - nested single wrappers: '["[[21,22]]"]' or [[ "[21,22]" ]]
+   *  - nested wrappers: '["[[21,22]]"]' or [[ "[21,22]" ]]
    *  - string numbers: [["21","22"]]
    */
   private parseTimeSlots(timeSlots: any): number[][] {
@@ -31,33 +31,64 @@ export class BookingController {
       throw new BadRequestException('timeSlots is required');
     }
 
-    // Unwrap repeated JSON-string layers (e.g. '"[[21,22]]"' -> [[21,22]])
-    // Try JSON.parse repeatedly while it's a string and parseable
-    while (typeof parsed === 'string') {
+    // Try to JSON.parse repeatedly if it's a string (limit loops to avoid infinite)
+    let loop = 0;
+    while (typeof parsed === 'string' && loop++ < 5) {
       try {
         parsed = JSON.parse(parsed);
       } catch (err) {
-        // cannot parse further: break and treat as final string (will error later)
         break;
       }
     }
 
-    // Handle single-element wrappers like [[ [21,22] ]] or [ "[21,22]" ]
-    // Keep unwrapping while it's an array of length 1 containing array or string
-    while (
+    // If we have a direct slot [2,3] (array of two numbers or numeric-strings), wrap into [[2,3]]
+    if (
       Array.isArray(parsed) &&
-      parsed.length === 1 &&
-      (Array.isArray(parsed[0]) || typeof parsed[0] === 'string')
+      parsed.length === 2 &&
+      (typeof parsed[0] === 'number' || typeof parsed[0] === 'string') &&
+      (typeof parsed[1] === 'number' || typeof parsed[1] === 'string')
     ) {
-      parsed = parsed[0];
-      if (typeof parsed === 'string') {
+      parsed = [parsed];
+    }
+
+    // Unwrap single-element wrappers but STOP unwrapping if inner is a valid slot [num,num]
+    // (handles e.g. [[[2,3]]] -> [[2,3]] and then stops)
+    loop = 0;
+    while (Array.isArray(parsed) && parsed.length === 1 && loop++ < 6) {
+      const inner = parsed[0];
+
+      // If inner is a string, try parse it (e.g. ['"[ [2,3] ]"'] cases)
+      if (typeof inner === 'string') {
         try {
-          parsed = JSON.parse(parsed);
+          const maybe = JSON.parse(inner);
+          parsed = maybe;
+          // continue loop to handle further nesting
+          continue;
         } catch {
-          // leave as string and continue; will fail further validation
+          // cannot parse inner string -> break out and let the validation catch it
           break;
         }
       }
+
+      // If inner is an array of two numbers/number-strings, that means parsed === [[2,3]] -> STOP unwrapping
+      if (
+        Array.isArray(inner) &&
+        inner.length === 2 &&
+        (typeof inner[0] === 'number' || typeof inner[0] === 'string') &&
+        (typeof inner[1] === 'number' || typeof inner[1] === 'string')
+      ) {
+        // already in the desired shape: [[start,end]]
+        break;
+      }
+
+      // Otherwise unwrap one level (e.g. [[[2,3]]] -> [[2,3]])
+      if (Array.isArray(inner)) {
+        parsed = inner;
+        continue;
+      }
+
+      // Not parseable further — break
+      break;
     }
 
     if (!Array.isArray(parsed)) {
@@ -69,7 +100,7 @@ export class BookingController {
     for (const rawSlot of parsed) {
       let slot = rawSlot;
 
-      // If slot is a string (e.g. "[21,22]"), try to parse it
+      // If slot is a string (e.g. "[21,22]"), try parse it
       if (typeof slot === 'string') {
         try {
           slot = JSON.parse(slot);
@@ -78,6 +109,7 @@ export class BookingController {
         }
       }
 
+      // If someone passed a single slot as numbers (e.g. slot === 9) — reject here
       if (!Array.isArray(slot) || slot.length !== 2) {
         throw new BadRequestException('Each time slot must be an array of 2 numbers like [6,7]');
       }

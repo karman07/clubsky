@@ -3,17 +3,20 @@ import { Client, LocalAuth } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode-terminal';
 import * as QRCode from 'qrcode'; // for saving QR as image
 import { writeFileSync } from 'fs';
+import * as os from 'os';
 
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
   private client: Client;
 
-  // Simple queue to store pending messages
   private messageQueue: { phoneNumber: string; message: string }[] = [];
   private isSending = false;
 
   constructor() {
+    // Detect OS
+    const isWindows = os.platform() === 'win32';
+
     this.client = new Client({
       authStrategy: new LocalAuth(),
       puppeteer: {
@@ -28,17 +31,14 @@ export class WhatsappService {
           '--single-process',
           '--disable-gpu',
         ],
-        // ✅ Explicit Chromium path (adjust if different on your VPS)
-        executablePath: '/usr/bin/chromium-browser',
+        // ✅ Use Chromium path only on Linux, let Puppeteer handle on Windows
+        executablePath: isWindows ? undefined : '/usr/bin/chromium-browser',
       },
     });
 
     // Generate QR
     this.client.on('qr', async (qr) => {
-      // Show QR in terminal
       qrcode.generate(qr, { small: false });
-
-      // Save QR as PNG file
       try {
         const qrImageBuffer = await QRCode.toBuffer(qr);
         writeFileSync('qr.png', qrImageBuffer);
@@ -48,12 +48,10 @@ export class WhatsappService {
       }
     });
 
-    // Client ready
     this.client.on('ready', () => {
       this.logger.log('✅ WhatsApp client is ready!');
     });
 
-    // Handle disconnection
     this.client.on('disconnected', (reason) => {
       this.logger.error(`⚠️ Client disconnected: ${reason}`);
     });
@@ -62,8 +60,15 @@ export class WhatsappService {
   }
 
   async sendMessage(phoneNumber: string, message: string) {
-    // Format phone number: WhatsApp expects country code + number + @c.us
+    // ✅ Clean number
     let formatted = phoneNumber.replace(/\D/g, '');
+
+    // ✅ Always prepend +91 if not starting with country code
+    if (!formatted.startsWith('91')) {
+      formatted = '91' + formatted;
+    }
+
+    // ✅ Append WhatsApp suffix
     if (!formatted.endsWith('@c.us')) {
       formatted = formatted + '@c.us';
     }

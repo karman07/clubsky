@@ -2,8 +2,8 @@ import {
   IsArray,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
-  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -20,31 +20,37 @@ export class CreateBookingDto {
   @IsNotEmpty()
   phoneNumber: string;
 
+  // NOTE: controller normalizes timeSlots; keep optional validation here if used elsewhere
   @IsArray()
-  @ValidateNested({ each: true })
+  @IsOptional()
   @Type(() => Array)
-  timeSlots: number[][];
+  timeSlots?: number[][];
 
   @IsString()
   @IsNotEmpty()
   date: string;
 
   @IsNumber()
-  paidAmount: number;
+  @IsOptional()
+  paidAmount?: number;
 
   @IsString()
-  @IsNotEmpty()
-  email: string;
+  @IsOptional()
+  email?: string;
 
   @IsString()
-  paymentId: string;
+  @IsOptional()
+  paymentId?: string;
 
   @IsString()
-  orderId: string;
+  @IsOptional()
+  orderId?: string;
 
   @IsString()
-  paymentSignature: string;
+  @IsOptional()
+  paymentSignature?: string;
 
   @IsString()
-  paymentStatus: string;
+  @IsOptional()
+  paymentStatus?: string;
 }
