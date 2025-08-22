@@ -29,12 +29,12 @@ export class WhatsappService {
 
     // ✅ Initialize WhatsApp client
     this.client = new Client({
-      authStrategy: new LocalAuth(),
+      authStrategy: new LocalAuth({
+        clientId: 'main', // 🔑 give each bot a unique ID if you run multiple
+      }),
       puppeteer: {
         headless: true,
         executablePath,
-        // 🆕 Separate Chrome userDataDir → avoids SingletonLock issues
-        userDataDir: path.join(process.cwd(), '.wwebjs_auth', 'chrome-data'),
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -64,12 +64,12 @@ export class WhatsappService {
       this.logger.log('✅ WhatsApp client is ready!');
     });
 
-    // ✅ Clean lock + initialize client
+    // 🧹 Clean up any stale SingletonLock before launching Chrome
     this.cleanupLock();
     this.client.initialize();
   }
 
-  // 🧹 Cleanup stale SingletonLock before launching Chrome
+  // 🧹 Remove stale Puppeteer/Chrome lock
   private cleanupLock() {
     const sessionLock = path.join(
       process.cwd(),
