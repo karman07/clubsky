@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Client, LocalAuth } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode-terminal';
 import * as QRCode from 'qrcode';
-import { writeFileSync, existsSync } from 'fs';
+import { writeFileSync, existsSync, unlinkSync } from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class WhatsappService {
@@ -12,6 +13,24 @@ export class WhatsappService {
   private isSending = false;
 
   constructor() {
+    // ✅ Clean up stale Puppeteer lock if exists
+    const sessionLock = path.join(
+      process.cwd(), // safer than __dirname if running from Nest
+      'backend',
+      '.wwebjs_auth',
+      'session',
+      'SingletonLock'
+    );
+
+    if (existsSync(sessionLock)) {
+      try {
+        unlinkSync(sessionLock);
+        this.logger.log('🧹 Removed stale SingletonLock');
+      } catch (err) {
+        this.logger.warn('⚠️ Could not remove SingletonLock', err);
+      }
+    }
+
     // ✅ Check available Chrome/Chromium executables
     const possiblePaths = [
       '/usr/bin/google-chrome',
@@ -38,7 +57,6 @@ export class WhatsappService {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--single-process',
           '--disable-gpu',
         ],
       },
