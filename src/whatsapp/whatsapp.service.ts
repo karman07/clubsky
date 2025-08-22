@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Client, LocalAuth } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode-terminal';
-import * as QRCode from 'qrcode'; // ✅ for saving QR as image
+import * as QRCode from 'qrcode'; // for saving QR as image
 import { writeFileSync } from 'fs';
 
 @Injectable()
@@ -18,10 +18,22 @@ export class WhatsappService {
       authStrategy: new LocalAuth(),
       puppeteer: {
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'], // ✅ stability on VPS
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-gpu',
+        ],
+        // ✅ Explicit Chromium path (adjust if different on your VPS)
+        executablePath: '/usr/bin/chromium-browser',
       },
     });
 
+    // Generate QR
     this.client.on('qr', async (qr) => {
       // Show QR in terminal
       qrcode.generate(qr, { small: false });
@@ -36,8 +48,14 @@ export class WhatsappService {
       }
     });
 
+    // Client ready
     this.client.on('ready', () => {
       this.logger.log('✅ WhatsApp client is ready!');
+    });
+
+    // Handle disconnection
+    this.client.on('disconnected', (reason) => {
+      this.logger.error(`⚠️ Client disconnected: ${reason}`);
     });
 
     this.client.initialize();
