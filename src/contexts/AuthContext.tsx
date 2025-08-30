@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState } from "react"
 
 type User = { email: string }
 type AuthCtx = {
@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
-    const cached = localStorage.getItem('auth_user')
+    const cached = localStorage.getItem("auth_user")
     if (cached) setUser(JSON.parse(cached))
   }, [])
 
@@ -27,12 +27,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const u = { email }
     setUser(u)
-    localStorage.setItem('auth_user', JSON.stringify(u))
+    localStorage.setItem("auth_user", JSON.stringify(u))
   }
 
   function logout() {
     setUser(null)
-    localStorage.removeItem('auth_user')
+    localStorage.removeItem("auth_user")
   }
 
   return <Ctx.Provider value={{ user, login, logout }}>{children}</Ctx.Provider>
@@ -40,6 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider")
   return ctx
 }
