@@ -183,7 +183,7 @@ const createRazorpayOrder = async () => {
   const handlePayment = async (orderData) => {
     return new Promise((resolve, reject) => {
       const options = {
-        key: 'rzp_test_TJOrQglqT6B38A', // Replace with your Razorpay key
+        key: 'rzp_live_RCNABOr0SdBVkE', // Replace with your Razorpay key
         amount: orderData.amount,
         currency: orderData.currency,
         name: 'ClubSkyshot',
