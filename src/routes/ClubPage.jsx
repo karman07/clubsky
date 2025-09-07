@@ -120,7 +120,7 @@ export default function ClubPage() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-4 h-4" />
-              <span className="text-sm">Open 6 AM - 11 PM</span>
+              <span className="text-sm">Open 6 AM - 1 AM</span>
             </div>
           </div>
           

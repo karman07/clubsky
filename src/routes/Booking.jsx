@@ -88,18 +88,29 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
     isDesktop 
   } = screenSize;
 
-  // Time slots (6 AM to 11 PM in 1-hour intervals)
-  const timeSlots = useMemo(() => {
-    const slots = [];
-    for (let hour = 6; hour < 23; hour++) {
-      const timeString = `${hour.toString().padStart(2, '0')}:00`;
-      const displayTime = hour < 12 ? `${hour}:00 AM` : 
-                         hour === 12 ? '12:00 PM' : 
-                         `${hour - 12}:00 PM`;
-      slots.push({ value: timeString, display: displayTime, hour });
+const timeSlots = useMemo(() => {
+  const slots = [];
+  // Start at 6 AM (hour = 6)
+  for (let hour = 6; hour <= 25; hour++) { 
+    // hour goes till 25 because 24 = 12 AM, 25 = 1 AM
+    const normalizedHour = hour % 24; // Convert back into 0–23
+    const timeString = `${normalizedHour.toString().padStart(2, '0')}:00`;
+
+    let displayTime;
+    if (normalizedHour === 0) {
+      displayTime = '12:00 AM';
+    } else if (normalizedHour < 12) {
+      displayTime = `${normalizedHour}:00 AM`;
+    } else if (normalizedHour === 12) {
+      displayTime = '12:00 PM';
+    } else {
+      displayTime = `${normalizedHour - 12}:00 PM`;
     }
-    return slots;
-  }, []);
+
+    slots.push({ value: timeString, display: displayTime, hour: normalizedHour });
+  }
+  return slots;
+}, []);
 
   // Get price per slot from selected court
   const pricePerSlot = selectedCourt?.price || 50;
