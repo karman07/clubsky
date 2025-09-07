@@ -90,24 +90,26 @@ const ImprovedBookingPage = ({ courtId: propCourtId }) => {
 
 const timeSlots = useMemo(() => {
   const slots = [];
-  // Start at 6 AM (hour = 6)
-  for (let hour = 6; hour <= 25; hour++) { 
-    // hour goes till 25 because 24 = 12 AM, 25 = 1 AM
-    const normalizedHour = hour % 24; // Convert back into 0–23
-    const timeString = `${normalizedHour.toString().padStart(2, '0')}:00`;
-
+  // Add midnight and 1 AM first
+  slots.push(
+    { value: "00:00", display: "12:00 AM", hour: 0 },
+    { value: "01:00", display: "1:00 AM", hour: 1 }
+  );
+  
+  // Then add 6 AM to 11 PM
+  for (let hour = 6; hour <= 23; hour++) { 
+    const timeString = `${hour.toString().padStart(2, '0')}:00`;
     let displayTime;
-    if (normalizedHour === 0) {
-      displayTime = '12:00 AM';
-    } else if (normalizedHour < 12) {
-      displayTime = `${normalizedHour}:00 AM`;
-    } else if (normalizedHour === 12) {
+    
+    if (hour < 12) {
+      displayTime = `${hour}:00 AM`;
+    } else if (hour === 12) {
       displayTime = '12:00 PM';
     } else {
-      displayTime = `${normalizedHour - 12}:00 PM`;
+      displayTime = `${hour - 12}:00 PM`;
     }
 
-    slots.push({ value: timeString, display: displayTime, hour: normalizedHour });
+    slots.push({ value: timeString, display: displayTime, hour });
   }
   return slots;
 }, []);
@@ -171,11 +173,21 @@ const timeSlots = useMemo(() => {
     
     if (Array.isArray(timeSlotRanges)) {
       timeSlotRanges.forEach(range => {
-        if (Array.isArray(range) && range.length === 2) {
-          const [start, end] = range;
-          for (let hour = start; hour <= end; hour++) {
+        if (Array.isArray(range)) {
+          if (range.length === 2) {
+            // Handle range of hours [start, end]
+            const [start, end] = range;
+            for (let hour = start; hour <= end; hour++) {
+              expandedSlots.add(`${hour.toString().padStart(2, '0')}:00`);
+            }
+          } else if (range.length === 1) {
+            // Handle single hour [hour]
+            const [hour] = range;
             expandedSlots.add(`${hour.toString().padStart(2, '0')}:00`);
           }
+        } else if (typeof range === 'number') {
+          // Handle single hour without array
+          expandedSlots.add(`${range.toString().padStart(2, '0')}:00`);
         }
       });
     }
@@ -190,7 +202,12 @@ const timeSlots = useMemo(() => {
         try {
           const courtId = selectedCourt._id || selectedCourt.id;
           const unavailableRanges = await getUnavailableSlots(courtId, selectedDate);
-          const expandedUnavailable = expandTimeSlots(unavailableRanges);
+          
+          // Ensure unavailableRanges is an array
+          const rangesArray = Array.isArray(unavailableRanges) ? unavailableRanges : [];
+          
+          // Process the ranges and add any single numbers as well
+          const expandedUnavailable = expandTimeSlots(rangesArray);
           setUnavailableSlots(expandedUnavailable);
           
           const fullyBooked = await getFullyBookedDays(courtId);
@@ -206,8 +223,33 @@ const timeSlots = useMemo(() => {
   // Calculate total price
   const totalPrice = selectedSlots.size * pricePerSlot;
 
+  // Function to check if a time slot should be unavailable based on current time
+  const isSlotUnavailable = (slot) => {
+    if (unavailableSlots.has(slot)) return true;
+    
+    const currentDate = new Date();
+    const selectedDateTime = new Date(selectedDate);
+    
+    // If selected date is today, check time
+    if (selectedDateTime.toDateString() === currentDate.toDateString()) {
+      const currentHour = currentDate.getHours();
+      let slotHour = parseInt(slot.split(':')[0]);
+      
+      // For 12 AM and 1 AM slots, we consider them part of the current day
+      // We'll mark them as unavailable if we're past those hours on the current day
+      if (slotHour <= 1) {
+        return currentHour > slotHour;
+      }
+      
+      // For other hours, mark as unavailable if current time has passed
+      return slotHour <= currentHour;
+    }
+    
+    return false;
+  };
+
   const handleSlotToggle = (slot) => {
-    if (unavailableSlots.has(slot)) return;
+    if (isSlotUnavailable(slot)) return;
     
     setSelectedSlots(prev => {
       const newSlots = new Set(prev);
@@ -588,7 +630,7 @@ const timeSlots = useMemo(() => {
               <h2 className={`${responsive.text.lg} font-semibold mb-3 sm:mb-4`} style={{ color: '#24392B' }}>Available Time Slots</h2>
               <div className={`grid ${responsive.grid.timeSlots}`}>
                 {timeSlots.map((slot) => {
-                  const isUnavailable = unavailableSlots.has(slot.value);
+                  const isUnavailable = isSlotUnavailable(slot.value);
                   const isSelected = selectedSlots.has(slot.value);
                   
                   return (
@@ -806,7 +848,7 @@ const timeSlots = useMemo(() => {
               <h2 className={`${responsive.text.xl} font-semibold mb-5`} style={{ color: '#24392B' }}>Available Time Slots</h2>
               <div className={`grid ${responsive.grid.timeSlots}`}>
                 {timeSlots.map((slot) => {
-                  const isUnavailable = unavailableSlots.has(slot.value);
+                  const isUnavailable = isSlotUnavailable(slot.value);
                   const isSelected = selectedSlots.has(slot.value);
                   
                   return (
@@ -1015,7 +1057,7 @@ const timeSlots = useMemo(() => {
                 <h2 className="text-xl font-semibold mb-6" style={{ color: '#24392B' }}>Available Time Slots</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {timeSlots.map((slot) => {
-                    const isUnavailable = unavailableSlots.has(slot.value);
+                    const isUnavailable = isSlotUnavailable(slot.value);
                     const isSelected = selectedSlots.has(slot.value);
                     
                     return (
