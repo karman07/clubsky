@@ -18,12 +18,10 @@ export class BookingService {
     throw new BadRequestException('timeSlots is required and must be a non-empty array');
   }
 
-  // If only one slot provided → duplicate it
+  // If only one slot provided → save only the start time
+  let bookedSlot: number[] = [];
   if (dto.timeSlots.length === 1) {
-    dto.timeSlots = [dto.timeSlots[0], dto.timeSlots[0]];
-  }
-
-  for (const slot of dto.timeSlots) {
+    const slot = dto.timeSlots[0];
     if (
       !Array.isArray(slot) ||
       slot.length !== 2 ||
@@ -35,6 +33,24 @@ export class BookingService {
         `Invalid time slot: ${JSON.stringify(slot)}. Each slot must be [start, end] like [6,7]`,
       );
     }
+    // Save only the start time in DB as [start]
+    dto.timeSlots = [[slot[0]]];
+    bookedSlot = [slot[0]];
+  } else {
+    for (const slot of dto.timeSlots) {
+      if (
+        !Array.isArray(slot) ||
+        slot.length !== 2 ||
+        typeof slot[0] !== 'number' ||
+        typeof slot[1] !== 'number' ||
+        slot[0] >= slot[1]
+      ) {
+        throw new BadRequestException(
+          `Invalid time slot: ${JSON.stringify(slot)}. Each slot must be [start, end] like [6,7]`,
+        );
+      }
+    }
+    bookedSlot = dto.timeSlots.map(([start, _end]) => start);
   }
 
   // 1. Fetch all existing bookings for the same court & date
@@ -45,8 +61,13 @@ export class BookingService {
 
   // 2. Check overlap
   for (const b of existing) {
-    for (const [start, end] of b.timeSlots) {
-      for (const [reqStart, reqEnd] of dto.timeSlots) {
+    for (const slot of b.timeSlots) {
+      // slot could be [start, end] or [start] (for single slot)
+      let start = slot[0];
+      let end = slot.length === 2 ? slot[1] : slot[0] + 1;
+      for (const reqSlot of dto.timeSlots) {
+        let reqStart = reqSlot[0];
+        let reqEnd = reqSlot.length === 2 ? reqSlot[1] : reqSlot[0] + 1;
         if (!(reqEnd <= start || reqStart >= end)) {
           throw new BadRequestException(
             `Time range ${reqStart}:00 - ${reqEnd}:00 overlaps with existing booking.`,
@@ -61,7 +82,12 @@ export class BookingService {
   await booking.save();
 
   // 4. WhatsApp message
-  const timeSlotsText = dto.timeSlots.map(([s, e]) => `${s}:00 - ${e}:00`).join(', ');
+  let timeSlotsText = '';
+  if (dto.timeSlots.length === 1 && dto.timeSlots[0].length === 1) {
+    timeSlotsText = `${dto.timeSlots[0][0]}:00`;
+  } else {
+    timeSlotsText = dto.timeSlots.map(([s, e]) => `${s}:00 - ${e}:00`).join(', ');
+  }
   const message =
     `✅ Booking Confirmed!\n\n` +
     `Court: ${dto.courtId}\n` +
@@ -76,7 +102,7 @@ export class BookingService {
     console.warn('WhatsApp send failed:', err);
   }
 
-  return { success: true, booking };
+  return { success: true, bookedSlot, booking };
 }
 
 
