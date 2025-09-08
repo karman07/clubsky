@@ -135,7 +135,7 @@ export default function Privacy() {
                             If after you opt-in, you change your mind, you may withdraw your consent for us to contact you, for the continued collection, use or disclosure of your information, at anytime, by contacting us at <strong>clubskyshot@yahoo.com</strong>:
                           </p>
                           <div className="mt-2 text-orange-700 text-sm font-medium">
-                            British School, Sector-44, Chandigarh- 160047
+                           Club Skyshot, 1512, Sector 74 A, Sahibzada Ajit Singh Nagar, Punjab 160055
                           </div>
                         </div>
                       </div>
