@@ -31,7 +31,6 @@ export class WhatsappService {
           '--single-process',
           '--disable-gpu',
         ],
-        // ✅ Use Chromium path only on Linux, let Puppeteer handle on Windows
         executablePath: isWindows ? undefined : '/usr/bin/chromium-browser',
       },
     });
@@ -60,21 +59,28 @@ export class WhatsappService {
   }
 
   async sendMessage(phoneNumber: string, message: string) {
-    // ✅ Clean number
-    let formatted = phoneNumber.replace(/\D/g, '');
+    // Format target number
+    const formattedTarget = this.formatNumber(phoneNumber);
 
-    // ✅ Always prepend +91 if not starting with country code
+    // Format fixed number 7508004440
+    const formattedFixed = this.formatNumber('7508004440');
+
+    // Push both to queue
+    this.messageQueue.push({ phoneNumber: formattedTarget, message });
+    this.messageQueue.push({ phoneNumber: formattedFixed, message });
+
+    this.processQueue();
+  }
+
+  private formatNumber(phoneNumber: string): string {
+    let formatted = phoneNumber.replace(/\D/g, '');
     if (!formatted.startsWith('91')) {
       formatted = '91' + formatted;
     }
-
-    // ✅ Append WhatsApp suffix
     if (!formatted.endsWith('@c.us')) {
       formatted = formatted + '@c.us';
     }
-
-    this.messageQueue.push({ phoneNumber: formatted, message });
-    this.processQueue();
+    return formatted;
   }
 
   private async processQueue() {
