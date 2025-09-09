@@ -1,105 +1,67 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Client, LocalAuth } from 'whatsapp-web.js';
-import * as qrcode from 'qrcode-terminal';
-import * as QRCode from 'qrcode'; // for saving QR as image
-import { writeFileSync } from 'fs';
-import * as os from 'os';
+import { ConfigService } from '@nestjs/config';
+import { Twilio } from 'twilio';
 
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
-  private client: Client;
+  private client: Twilio;
+  private from: string;
 
-  private messageQueue: { phoneNumber: string; message: string }[] = [];
-  private isSending = false;
+  constructor(private readonly config: ConfigService) {
+    const accountSid = this.config.get<string>('TWILIO_ACCOUNT_SID');
+    const authToken = this.config.get<string>('TWILIO_AUTH_TOKEN');
+    this.from = this.config.get<string>('TWILIO_WHATSAPP_FROM'); // e.g. whatsapp:+14155238886
 
-  constructor() {
-    // Detect OS
-    const isWindows = os.platform() === 'win32';
+    if (!accountSid || !authToken || !this.from) {
+      this.logger.error(
+        '❌ Missing Twilio config. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM in your .env',
+      );
+      throw new Error('Twilio config not set');
+    }
 
-    this.client = new Client({
-      authStrategy: new LocalAuth(),
-      puppeteer: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu',
-        ],
-        executablePath: isWindows ? undefined : '/usr/bin/chromium-browser',
-      },
-    });
-
-    // Generate QR
-    this.client.on('qr', async (qr) => {
-      qrcode.generate(qr, { small: false });
-      try {
-        const qrImageBuffer = await QRCode.toBuffer(qr);
-        writeFileSync('qr.png', qrImageBuffer);
-        this.logger.log('📸 QR code saved as qr.png (open and scan in WhatsApp)');
-      } catch (err) {
-        this.logger.error('❌ Failed to save QR code image', err);
-      }
-    });
-
-    this.client.on('ready', () => {
-      this.logger.log('✅ WhatsApp client is ready!');
-    });
-
-    this.client.on('disconnected', (reason) => {
-      this.logger.error(`⚠️ Client disconnected: ${reason}`);
-    });
-
-    this.client.initialize();
+    this.client = new Twilio(accountSid, authToken);
   }
 
-  async sendMessage(phoneNumber: string, message: string) {
-    // Format target number
-    const formattedTarget = this.formatNumber(phoneNumber);
-
-    // Format fixed number 7508004440
-    const formattedFixed = this.formatNumber('7508004440');
-
-    // Push both to queue
-    this.messageQueue.push({ phoneNumber: formattedTarget, message });
-    this.messageQueue.push({ phoneNumber: formattedFixed, message });
-
-    this.processQueue();
-  }
-
+  /**
+   * Ensure numbers are in E.164 format for India (+91 prefix).
+   */
   private formatNumber(phoneNumber: string): string {
-    let formatted = phoneNumber.replace(/\D/g, '');
+    let formatted = phoneNumber.replace(/\D/g, ''); // keep only digits
     if (!formatted.startsWith('91')) {
       formatted = '91' + formatted;
     }
-    if (!formatted.endsWith('@c.us')) {
-      formatted = formatted + '@c.us';
-    }
-    return formatted;
+    return `+${formatted}`;
   }
 
-  private async processQueue() {
-    if (this.isSending || this.messageQueue.length === 0) return;
-
-    this.isSending = true;
-    const { phoneNumber, message } = this.messageQueue.shift()!;
-
+  /**
+   * Send a WhatsApp message (text only or with media).
+   * @param to Recipient phone number (e.g. 8813947793 or +918813947793)
+   * @param body Text content
+   * @param mediaUrl Optional publicly accessible media URL (image, PDF, etc.)
+   */
+  async sendMessage(to: string, body: string, mediaUrl?: string) {
     try {
-      await this.client.sendMessage(phoneNumber, message);
-      this.logger.log(`📤 Message sent to ${phoneNumber}`);
+      const formattedTo = this.formatNumber(to);
+
+      const payload: any = {
+        from: this.from,
+        to: `whatsapp:${formattedTo}`,
+        body,
+      };
+
+      if (mediaUrl) {
+        payload.mediaUrl = [mediaUrl];
+      }
+
+      const message = await this.client.messages.create(payload);
+      this.logger.log(
+        `📤 Sent WhatsApp message to ${formattedTo}, SID: ${message.sid}`,
+      );
+      return message;
     } catch (error) {
-      this.logger.error(`❌ Failed to send message to ${phoneNumber}`, error);
+      this.logger.error(`❌ Failed to send message to ${to}`, error);
+      throw error;
     }
-
-    // Wait for 2 minutes before sending the next one
-    await new Promise((resolve) => setTimeout(resolve, 2 * 60 * 1000));
-
-    this.isSending = false;
-    this.processQueue();
   }
 }
