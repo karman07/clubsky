@@ -22,7 +22,6 @@ export default function Bookings(): JSX.Element {
   const courtOptions = useMemo((): [string, string][] => {
     const uniqueCourts = new Map<string, string>()
     bookings.forEach((b: Booking) => {
-      // Handle both populated and non-populated courtId
       if (typeof b.courtId === 'object' && b.courtId._id) {
         uniqueCourts.set(b.courtId._id, b.courtId.name)
       } else if (typeof b.courtId === 'string') {
@@ -36,11 +35,10 @@ export default function Bookings(): JSX.Element {
     return bookings.filter((b: Booking) => {
       if (query && !(`${b.name} ${b.phoneNumber}`.toLowerCase().includes(query.toLowerCase()))) return false
       if (date && b.date !== date) return false
-      
-      // Handle both populated and non-populated courtId for filtering
+
       const currentCourtId: string = typeof b.courtId === 'object' ? b.courtId._id : b.courtId
       if (courtId !== 'all' && currentCourtId !== courtId) return false
-      
+
       const min: number = minPaid ? Number(minPaid) : -Infinity
       const max: number = maxPaid ? Number(maxPaid) : Infinity
       if (b.paidAmount < min || b.paidAmount > max) return false
@@ -58,27 +56,35 @@ export default function Bookings(): JSX.Element {
 
   const hasActiveFilters: boolean = !!(query || date || courtId !== 'all' || minPaid || maxPaid)
 
-  // const getActivityColor = (activity: string): string => {
-  //   const colors: Record<string, string> = {
-  //     'Badminton': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  //     'Tennis': 'bg-blue-50 text-blue-700 border-blue-200',
-  //     'Basketball': 'bg-orange-50 text-orange-700 border-orange-200',
-  //     'Football': 'bg-green-50 text-green-700 border-green-200',
-  //     'Volleyball': 'bg-purple-50 text-purple-700 border-purple-200',
-  //   }
-  //   return colors[activity] || 'bg-gray-50 text-gray-700 border-gray-200'
-  // }
+  // Fix: handle single-element arrays as 1-hour slots
+  const formatTimeSlot = (slot: number[] | number): string => {
+    let start: number
+    let end: number
 
-  const formatTimeSlot = (slot: number[]): string => {
-    if (slot.length !== 2) return 'Invalid slot'
-    
+    if (Array.isArray(slot)) {
+      if (slot.length === 2) {
+        [start, end] = slot
+      } else if (slot.length === 1) {
+        start = slot[0]
+        end = slot[0] + 1
+      } else {
+        return 'Invalid slot'
+      }
+    } else if (typeof slot === 'number') {
+      start = slot
+      end = slot + 1
+    } else {
+      return 'Invalid slot'
+    }
+
     const formatHour = (hour: number): string => {
       if (hour === 0) return '12:00 AM'
       if (hour < 12) return `${hour}:00 AM`
       if (hour === 12) return '12:00 PM'
       return `${hour - 12}:00 PM`
     }
-    return `${formatHour(slot[0])} - ${formatHour(slot[1])}`
+
+    return `${formatHour(start)} - ${formatHour(end)}`
   }
 
   return (
@@ -87,12 +93,8 @@ export default function Bookings(): JSX.Element {
         {/* Header */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold">
-              Bookings Dashboard
-            </h1>
-            <p className="text-lg text-slate-600">
-              Manage and track all your court reservations
-            </p>
+            <h1 className="text-4xl font-bold">Bookings Dashboard</h1>
+            <p className="text-lg text-slate-600">Manage and track all your court reservations</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
@@ -125,8 +127,7 @@ export default function Bookings(): JSX.Element {
           <div className="grid gap-4 lg:grid-cols-6">
             <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                <Search className="inline h-4 w-4 mr-1" />
-                Search
+                <Search className="inline h-4 w-4 mr-1" /> Search
               </label>
               <Input 
                 value={query} 
@@ -138,8 +139,7 @@ export default function Bookings(): JSX.Element {
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                <Calendar className="inline h-4 w-4 mr-1" />
-                Date
+                <Calendar className="inline h-4 w-4 mr-1" /> Date
               </label>
               <Input 
                 type="date" 
@@ -151,8 +151,7 @@ export default function Bookings(): JSX.Element {
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                <MapPin className="inline h-4 w-4 mr-1" />
-                Court
+                <MapPin className="inline h-4 w-4 mr-1" /> Court
               </label>
               <Select 
                 value={courtId} 
@@ -210,75 +209,66 @@ export default function Bookings(): JSX.Element {
               <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-                    <User className="inline h-4 w-4 mr-2" />
-                    Customer
+                    <User className="inline h-4 w-4 mr-2" /> Customer
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-                    <Calendar className="inline h-4 w-4 mr-2" />
-                    Date
+                    <Calendar className="inline h-4 w-4 mr-2" /> Date
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-                    <Clock className="inline h-4 w-4 mr-2" />
-                    Time Slots
+                    <Clock className="inline h-4 w-4 mr-2" /> Time Slots
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-                    <CreditCard className="inline h-4 w-4 mr-2" />
-                    Amount
+                    <CreditCard className="inline h-4 w-4 mr-2" /> Amount
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {pageItems.map((booking: Booking, index: number) => {
-                  // const courtName: string = typeof booking.courtId === 'object' ? booking.courtId.name : 'Unknown Court'
-                  // const activity: string = typeof booking.courtId === 'object' ? booking.courtId.activity : ''
-                  
-                  return (
-                    <tr 
-                      key={booking._id} 
-                      className={`border-t border-slate-100 hover:bg-gradient-to-r hover:from-indigo-25 hover:to-purple-25 transition-colors duration-200 ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-slate-25'
-                      }`}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="font-semibold text-slate-800">{booking.name}</div>
-                          <div className="flex items-center text-sm text-slate-600">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {booking.phoneNumber}
-                          </div>
+                {pageItems.map((booking: Booking, index: number) => (
+                  <tr 
+                    key={booking._id} 
+                    className={`border-t border-slate-100 hover:bg-gradient-to-r hover:from-indigo-25 hover:to-purple-25 transition-colors duration-200 ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-slate-25'
+                    }`}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        <div className="font-semibold text-slate-800">{booking.name}</div>
+                        <div className="flex items-center text-sm text-slate-600">
+                          <Phone className="h-3 w-3 mr-1" />
+                          {booking.phoneNumber}
                         </div>
-                      </td>
-            
-                      <td className="px-6 py-4">
-                        <div className="text-slate-700 font-medium">
-                          {new Date(booking.date).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          {booking.timeSlots.map((slot: number[], i: number) => (
-                            <Badge 
-                              key={i} 
-                              className="bg-indigo-50 text-blue-500 border-indigo-200 text-xs font-medium"
-                            >
-                              {formatTimeSlot(slot)}
-                            </Badge>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-lg font-bold text-green-600">
-                          ₹{booking.paidAmount.toLocaleString()}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
+                      </div>
+                    </td>
+          
+                    <td className="px-6 py-4">
+                      <div className="text-slate-700 font-medium">
+                        {new Date(booking.date).toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {booking.timeSlots.map((slot: number[] | number, i: number) => (
+                          <Badge 
+                            key={i} 
+                            className="bg-indigo-50 text-blue-500 border-indigo-200 text-xs font-medium"
+                          >
+                            {formatTimeSlot(slot)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-lg font-bold text-green-600">
+                        ₹{booking.paidAmount.toLocaleString()}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
                 
                 {!loading && pageItems.length === 0 && (
                   <tr>
